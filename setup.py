@@ -4,11 +4,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 from setuptools import find_packages, setup
 
 setup(
-    name='abot',
-    version='0.0.1a',
-    description='Bot creation library',
+    name='mosbot',
+    version='0.0.1',
+    description='Mos bot',
     long_description=open('README.rst').read(),
-    url='https://github.com/txomon/abot',
+    url='https://github.com/txomon/mosbot',
     author='Javier Domingo Cansino',
     author_email='javierdo1@gmail.com',
     classifiers=[
@@ -22,7 +22,7 @@ setup(
     python_requires='>=3.6',
     include_package_data=True,
     zip_safe=False,
-    keywords=['slack', 'dubtrack', 'bot', 'async'],
+    keywords=['dubtrack', 'bot', 'mos', 'master-of-soundtrack'],
     entry_points={
         'console_scripts': [
             'bot=mosbot.__main__:main'

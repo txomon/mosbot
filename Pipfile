@@ -7,12 +7,12 @@ name = "pypi"
 
 [packages]
 
-aiohttp = "*"
 sqlalchemy = "*"
 click = "*"
 aiopg = "*"
 alembic = "*"
 asyncio-extras = "*"
+abot = {git = "https://github.com/txomon/abot", editable = true}
 
 
 [dev-packages]
@@ -22,4 +22,3 @@ rope = "*"
 "autopep8" = "*"
 restructuredtext-lint = "*"
 logging-tree = "*"
-ipdb = "*"
