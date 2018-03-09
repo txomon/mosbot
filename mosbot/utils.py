@@ -15,7 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 def setup_logging(debug=False):
+    """Setup logging app wide, pass parameter to enable more verbosity
+
+    :param bool debug: If we want it verbose or not, defaults to False
+    :return:
+    """
     filename = 'logging.conf' if not debug else 'logging-debug.conf'
+    # TODO: Check install resilience
     logging.config.fileConfig(os.path.join(os.path.dirname(__file__), filename), disable_existing_loggers=False)
     if debug:
         logger.debug('Level is debug now')
@@ -35,7 +41,8 @@ def setup_logging(debug=False):
 
 
 def check_alembic_in_latest_version():
-    config = Config('alembic.ini')
+    """Makes sure we are using the latest alembic"""
+    config = Config('alembic.ini')  # TODO: File not install() resistan
     script = ScriptDirectory.from_config(config)
     heads = script.get_revisions(script.get_heads())
     head = heads[0].revision

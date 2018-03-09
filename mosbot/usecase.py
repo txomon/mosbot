@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 async def save_history_songs():
+    """Make sure we haven't lost a single playback.
+
+    Gets in charge of going to dubtrack up to the previous saved history moment, and fills the database.
+
+    It makes parallel queries and everything to maximise throughput.
+
+    Saves previous to first unsuccessful storage, or last successful. This is, it doesn't save 5 if 4 failed."""
     engine = await db.get_engine()
     last_song = await load_bot_data(BotConfig.last_saved_history)
     if not last_song:
@@ -71,6 +78,7 @@ async def save_history_songs():
 
 
 async def save_history_chunk(songs, conn: asa.SAConnection):
+    """In charge of saving a chunck of continuous songs"""
     # {'__v': 0,
     #  '_id': '583bf4a9d9abb248008a698a',
     #  '_song': {
@@ -270,6 +278,7 @@ async def save_history_chunk(songs, conn: asa.SAConnection):
 
 
 async def ensure_dubtrack_entity(user: DubtrackEntity, *, conn=None):
+    """Make sure that a dubtrack entity is registered in the database"""
     dtid = user.id
     username = user.username
     user = await get_user(user_dict={'dtid': dtid}, conn=conn)
@@ -281,6 +290,7 @@ async def ensure_dubtrack_entity(user: DubtrackEntity, *, conn=None):
 
 
 async def ensure_dubtrack_playing(event: DubtrackPlaying, *, conn=None):
+    """Make sure that we have the track and the playback in the database"""
     user = await ensure_dubtrack_entity(event.sender)
     user_id = user['id']
     track_entry = {
@@ -308,6 +318,13 @@ async def ensure_dubtrack_playing(event: DubtrackPlaying, *, conn=None):
 
 
 async def ensure_dubtrack_skip(event: DubtrackSkip, *, conn=None):
+    """Make sure to record an skip in the last playback we have.
+
+    Warning: This can put at risk db integrity because we don't know what is the song it skipped. We are entirely
+    relying on that dubtrack backend will send first a chat skip event and then a playing event. Also, this may have
+    a race condition because of the asyncronicity of the library/bot. We may end up processing this event untimed and
+    wrong... Hope there is not such race condition for now.
+    """
     playback = await get_last_playback(conn=conn)
     user = await ensure_dubtrack_entity(event.sender)
     playback_id = playback['id']
@@ -321,6 +338,9 @@ async def ensure_dubtrack_skip(event: DubtrackSkip, *, conn=None):
 
 
 async def ensure_dubtrack_dub(event: DubtrackDub, *, conn=None):
+    """Ensure that a user action (user upvote/downvote) is being stored. Because we don't have all the track info,
+    we cannot be 100% sure of the track, but we check start time, that is unique, if this checks, better to lose the
+    data than to put a wrong dub from a person"""
     playback = await get_last_playback(conn=conn)
     if not event.played == playback['start']:
         logger.error(f'Last saved playback is {playback["start"]} but this vote is for {event.played}')
