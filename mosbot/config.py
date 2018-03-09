@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+"""Configuration parameters for the bot, to be able to run them it's important to have them filled, it will raise an
+error if they are not defined"""
+
 import json
 import os
 
 
-def get_config(env_var, *args):
+def get_config(env_var: str, *args):
+    """Get config parameter from file or environment var
+
+    :param str env_var: Environment var name, json key is derived from this
+    :param args: This is a default value, if not defined, it will fail
+    :return:
+    """
     # First file
     value = None
     try:
@@ -28,7 +37,7 @@ def get_config(env_var, *args):
     raise EnvironmentError(f'Configuration {env_var} variable is not set by file or environment')
 
 
-DATABASE_URL = get_config('DATABASE_URL', 'postgresql://localhost/test')
+DATABASE_URL = get_config('DATABASE_URL', 'postgresql://postgres@localhost/postgres')
 
 DUBTRACK_USERNAME = get_config('DUBTRACK_USERNAME', None)
 DUBTRACK_PASSWORD = get_config('DUBTRACK_PASSWORD', None)
