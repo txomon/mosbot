@@ -5,18 +5,21 @@ Revises: layout
 Create Date: 2018-02-23 10:06:09.766820+00:00
 
 """
+# revision identifiers, used by Alembic.
+import logging
+
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as psa
 from alembic import op
-# revision identifiers, used by Alembic.
 from sqlalchemy.engine import Connection
 
-from mosbot.db import Playback, BotData, BotConfig
+from mosbot.db import BotConfig, BotData, Playback
 
 revision = '343c78c7a0b8'
 down_revision = 'layout'
 branch_labels = None
 depends_on = None
+logger = logging.getLogger(__name__)
 
 
 def upgrade():
@@ -64,9 +67,14 @@ def upgrade():
     # ### end Alembic commands ###
     bind: Connection = op.get_bind()
     query = sa.select([sa.extract('epoch', Playback.c.start)]).order_by(sa.desc(Playback.c.start)).limit(1)
-    last_timestamp, = bind.execute(query).first()
-    query = sa.insert(BotData).values({'key': BotConfig.last_saved_history, 'value': last_timestamp})
-    op.execute(query)
+    try:
+        last_timestamp, = bind.execute(query).first()
+        query = sa.insert(BotData).values({'key': BotConfig.last_saved_history, 'value': last_timestamp})
+        op.execute(query)
+    except TypeError:
+        query = sa.insert(BotData).values({'key': BotConfig.last_saved_history, 'value': 0})
+        op.execute(query)
+        logger.info(f'There is no previous history, setting {BotConfig.last_saved_history} to 0')
 
 
 def downgrade():
