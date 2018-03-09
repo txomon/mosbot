@@ -6,8 +6,10 @@ you are not using it for your projects, you should. It is a mix between virtuale
 basically manages everything.
 
 So, once you have installed, place yourself in this folder in the command line and run:
- * If you just want to run the bot: `pipenv install`
- * If you want to develop: `pipenv install -d`
+
+* If you just want to run the bot: `pipenv install`
+
+* If you want to develop: `pipenv install -d`
 
 If these steps don't work, report it so that I can update this with relevant steps.
 
@@ -27,39 +29,39 @@ I would recommend you to run a local instance.
 If you have Docker and docker-compose installed, this is a really good way to run packaged software. There are complete
 guides on the internet, on how to run them, but for the basics:
 
- * Install Docker using your package manager or as suggested in their webpage
+* Install Docker using your package manager or as suggested in their webpage
 
- * Install docker-compose, same thing, or package manager or as in the webpage (it's just an script), btw, it's in
-python, so you can also install it with pip, but I would discourage this
+* Install docker-compose, same thing, or package manager or as in the webpage (it's just an script), btw, it's in
+  python, so you can also install it with pip, but I would discourage this
 
- * Open a terminal in this folder, this terminal will be used all the time while your bot is up to maintain up the
-database. There are other ways to run it in the background, but I don't like them.
+* Open a terminal in this folder, this terminal will be used all the time while your bot is up to maintain up the
+  database. There are other ways to run it in the background, but I don't like them.
 
- * In the terminal in this folder, run `docker-compose up`. This will download and run the packaged software (the
-postgres database in this case).
+* In the terminal in this folder, run `docker-compose up`. This will download and run the packaged software (the
+  postgres database in this case).
 
- * We now have to give structure to the database, run `alembic upgrade head` to setup all the tables etc. there.
+* We now have to give structure to the database, run `alembic upgrade head` to setup all the tables etc. there.
 
- * Now, in the other terminal, you can finally launch the bot command running `bot`.
+* Now, in the other terminal, you can finally launch the bot command running `bot`.
 
 The output of that command should be self explainatory. Now, you can go to the different files to read what each one
 contains. But I will outline here the structure a little:
 
- * The more inner layer and the thing that most defines the bot is the Data Model. This are the Entities that we
-manage, and they are in `mosbot/db.py`.
+* The more inner layer and the thing that most defines the bot is the Data Model. This are the Entities that we
+  manage, and they are in `mosbot/db.py`.
 
- * From there, because we have no ORM at the moment (asyncio doesn't have an async ORM yet), we have all the functions
-and queries that operate on the data in `mosbot/query.py`.
+* From there, because we have no ORM at the moment (asyncio doesn't have an async ORM yet), we have all the functions
+  and queries that operate on the data in `mosbot/query.py`.
 
- * Now you should be able to gather/write data and make some operations. There are some operations that are not as
-"simple" as the queries, and these are the "usecases" where you have a whole flow of queries and data transformation.
-The place where these are stored is in `mosbot/usecase.py`
+* Now you should be able to gather/write data and make some operations. There are some operations that are not as
+  "simple" as the queries, and these are the "usecases" where you have a whole flow of queries and data transformation.
+  The place where these are stored is in `mosbot/usecase.py`
 
- * Finally, in the most outer layer, you have the two main "interfaces", this is where we receive the data from the
-`abot` library and we have the handlers and commands. The files are, `mosbot/handler.py` for event handlers and
-`mosbot/command.py` for the commands.
+* Finally, in the most outer layer, you have the two main "interfaces", this is where we receive the data from the
+  `abot` library and we have the handlers and commands. The files are, `mosbot/handler.py` for event handlers and
+  `mosbot/command.py` for the commands.
 
- * There are two other files, that are "transversal" that are the `mosbot/utils.py` and `mosbot/config.py`.
+* There are two other files, that are "transversal" that are the `mosbot/utils.py` and `mosbot/config.py`.
 
 
 You should think of this architecture (file structure/function dependencies) as an onion. The idea is that the most
