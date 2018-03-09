@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+"""To have a clean architecture, here are modeled operations over the db file. This file should not import anything
+else than db and config if any.
+
+Queries to retrieve, insert or update data should be written here.
+"""
 
 import logging
 from typing import List, Optional
@@ -17,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 @async_contextmanager
 async def ensure_connection(conn):
+    """This makes sure that the connection is active. Will be replaced in the future by something attached to a
+    asyncio.Task scope, but for now let's just ignore it. It's the connection to the database, so it should be created
+    when we are planning to access it.
+
+    Unless there is a usecase that has it open for long time unnactively, you can just use it at the top and pass the
+    object down. Check existing code for examples"""
     provided_connection = bool(conn)
     if not provided_connection:
         conn = await (await get_engine()).acquire()

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+"""This file contains"""
+
 import asyncio
 import json
 import pprint
@@ -20,6 +22,7 @@ from mosbot.utils import setup_logging, check_alembic_in_latest_version
 
 
 class BotConfigValueType(click.ParamType):
+    """This is a custom type created to receive BotConfig parameters and validate them"""
     name = 'json'
 
     def convert(self, value, param, ctx):
@@ -50,17 +53,20 @@ class BotConfigValueType(click.ParamType):
 
 @cli.group(invoke_without_command=True)
 async def botcmd():
+    """Group in which the commands available only through the bot are"""
     print('botcmd')
 
 
 @botcmd.command()
 async def atest():
+    """Test (ping/pong) like to check if it works"""
     print('aTest')
 
 
 @botcmd.command()
 @click.option('--debug/--no-debug', '-d/ ', default=False)
 async def history_sync(debug):
+    """Triggers a history sync task. It should be really controlled so that users cannot trigger it alone."""
     check_alembic_in_latest_version()
     setup_logging(debug)
     await save_history_songs()
@@ -70,6 +76,8 @@ async def history_sync(debug):
 @click.option('--value', '-v', type=BotConfigValueType())
 @click.argument('key', type=click.Choice(v for v in vars(BotConfig) if not v.startswith('__')))
 async def config(key, value):
+    """Set new value for key in the database (used to override internals, needs to be controlled, as someone could
+    really break something here"""
     if value:
         await save_bot_data(key, value)
         cli.echo(f'Saved key {key}')
@@ -80,11 +88,13 @@ async def config(key, value):
 
 @click.group(invoke_without_command=True)
 def botcli():
+    """Group of commands that can only be executed from the command line"""
     click.echo('BOTCLI')
 
 
 @botcli.command()
 def test():
+    """Test command to see if it works"""
     click.echo('TEST')
     pprint.pprint(typing.get_type_hints(history_handler))
 
@@ -92,6 +102,7 @@ def test():
 @botcli.command()
 @click.option('--debug/--no-debug', '-d/ ', default=False)
 def run(debug):
+    """Run the bot, this is the main command that is usually run in the server"""
     check_alembic_in_latest_version()
     setup_logging(debug)
     # Setup
@@ -99,6 +110,7 @@ def run(debug):
     dubtrack_backend = dt.DubtrackBotBackend()
     dubtrack_backend.configure(username=mos_config.DUBTRACK_USERNAME, password=mos_config.DUBTRACK_PASSWORD)
     bot.attach_backend(backend=dubtrack_backend)
+    # bot.attach_command_group(botcmd) #: Disabled until permissions are implemented
 
     bot.add_event_handler(func=history_handler)
     bot.add_event_handler(func=availability_handler)
