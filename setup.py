@@ -27,5 +27,13 @@ setup(
         'console_scripts': [
             'bot=mosbot.__main__:main'
         ]
-    }
+    },
+    install_requires=[
+        'abot >= 0.0.1a1.dev15',
+        'aiopg',
+        'alembic',
+        'asyncio-extras',
+        'click',
+        'sqlalchemy',
+    ]
 )
