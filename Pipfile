@@ -12,7 +12,7 @@ click = "*"
 aiopg = "*"
 alembic = "*"
 asyncio-extras = "*"
-abot = {git = "https://github.com/txomon/abot", editable = true}
+abot = "==0.0.1a1.dev15"
 
 
 [dev-packages]
