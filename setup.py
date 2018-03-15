@@ -29,7 +29,7 @@ setup(
         ]
     },
     install_requires=[
-        'abot >= 0.0.1a1.dev15',
+        'abot==0.0.1a1.dev16',
         'aiopg',
         'alembic',
         'asyncio-extras',
