@@ -4,3 +4,9 @@ __pycache__/
 /dist/
 /build/
 config.json*
+/.pytest_cache/
+/.tox/
+/.coverage
+/coverage.xml
+/test-reports/
+
