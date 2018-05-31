@@ -23,12 +23,14 @@ logger = logging.getLogger(__name__)
 
 @async_contextmanager
 async def ensure_connection(conn):
-    """This makes sure that the connection is active. Will be replaced in the future by something attached to a
-    asyncio.Task scope, but for now let's just ignore it. It's the connection to the database, so it should be created
-    when we are planning to access it.
+    """
+    Makes sure that the connection is active. Will be replaced in the future by something attached to an
+    asyncio.Task scope, but for now let's just ignore it. The argument is the connection to the database, so
+    the connection should be created when we are planning to access the database.
 
-    Unless there is a usecase that has it open for long time unnactively, you can just use it at the top and pass the
-    object down. Check existing code for examples"""
+    Unless there is a usecase that keeps the connection open for a long time unnactively, you can just use
+    this function at the usecase top function and pass the conn object down. Check existing code for examples
+    """
     provided_connection = bool(conn)
     if not provided_connection:
         conn = await (await get_engine()).acquire()
@@ -40,7 +42,8 @@ async def ensure_connection(conn):
 
 
 async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
-    """Retrieve a user by id, or dtid or username. Prefers id
+    """
+    Retrieves a user by id, or dtid or username. id is preferred
 
     :param dict user_dict: Keys to define the get(), names as in the table columns
     :param conn: A connection if any open
@@ -65,7 +68,8 @@ async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
 
 
 async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
-    """Save user, makes sure that you provide at least either username or dtid,
+    """
+    Saves user, makes sure that you provide at least either username or dtid,
 
     :param dict user_dict: Keys to save in the database
     :param conn: A connection if any open
@@ -75,8 +79,8 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     query = psa.insert(User) \
         .values(user_dict) \
         .on_conflict_do_update(
-        index_elements=[User.c.dtid],
-        set_=user_dict
+            index_elements=[User.c.dtid],
+            set_=user_dict
     )
     async with ensure_connection(conn) as conn:
         user = await (await conn.execute(query)).first()
@@ -84,7 +88,8 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
 
 
 async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
-    """Get a given track, need to either have the id or the extid (if possible with origin
+    """
+    Get a given track, need to either have the id or the extid (if possible with origin
 
     :param dict track_dict: Keys as in the table columns
     :param conn: A connection if any open
@@ -108,7 +113,8 @@ async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
 
 
 async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
-    """Saves a track, updating whatever fields are given
+    """
+    Saves a track, updating whatever fields are given in track_dict
 
     :param dict track_dict: Keys as in the table columns
     :param conn: A connection if any open
@@ -280,7 +286,8 @@ async def get_last_playback(*, conn=None) -> dict:
         return dict(result) if result else None
 
 
-async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:  # TODO: should be optional
+# TODO: should be optional
+async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:
     """Get the user actions for a given user, no more filters than that
 
     :param str user_id: User id for who we want to retrieve the records for
@@ -296,7 +303,8 @@ async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:  # TODO: s
         return result
 
 
-async def get_user_dub_user_actions(user_id, *, conn=None) -> List[dict]:  # TODO: should be optional
+# TODO: should be optional
+async def get_user_dub_user_actions(user_id, *, conn=None) -> List[dict]:
     """Get the user dubs (upvote/downvote) only, not specific to a given playback
 
     :param str user_id: User id for who we want to retrieve the records for

@@ -38,7 +38,7 @@ async def get_engine():
 
 
 metadata = sa.MetaData()
-"""This is an sql alchemy object in which register the tables we are planning to access"""
+"""This is a SQLAlchemy object in which register the tables we are planning to access"""
 
 User = sa.Table('user', metadata,
                 sa.Column('id', sa.Integer, primary_key=True, nullable=False),
@@ -89,7 +89,7 @@ Playback = sa.Table('playback', metadata,
                     sa.Column('user_id', sa.ForeignKey('user.id'), nullable=True),
                     sa.Column('start', sa.DateTime, unique=True, nullable=False),
                     )
-"""Playback table contains the time/user that has played given :ref:`Track:
+"""Playback table contains the time/user that has played a given :ref:`Track:
 
     Playback is one go of a given :ref:`track_id` played at :ref:`start` time, by :ref:`user_id`.
 
