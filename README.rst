@@ -1,51 +1,61 @@
 How to get started
 ==================
 
-System level you should have pipenv installed. It is probably packaged, you can check on their webpage for steps. If
-you are not using it for your projects, you should. It is a mix between virtualenv and pip (it uses both below) and
-basically manages everything.
+1. Install *Pipenv* at a system level
+   
+   If you are not using it for your projects, you should. *Pipenv* is a mix between *pip* and *virtualenv* (it uses
+   both of them below) and basically manages everything. You can probably find *Pipenv* packaged, check their webpage
+   for installation steps.
 
-So, once you have installed, place yourself in this folder in the command line and run:
+2. Install dependencies
+   
+   In a command line, navigate to the current project directory and install the dependencies by running one of the
+   commands below.
 
-* If you just want to run the bot: `pipenv install`
+   * To use the bot: `pipenv install`
 
-* If you want to develop: `pipenv install -d`
+   * To develop: `pipenv install -d`
 
-If these steps don't work, report it so that I can update this with relevant steps.
+   If these steps don't work, please report it so that I can update these instructions with relevant steps.
 
-After installing dependencies, we are ready to install this as a package. The command is `python setup.py develop`. I
-you can also do `python setup.py install` but it's better to keep the installation linked to this directory instead of
-having setuptools package and install the bot separately. If you have doubts on what I just said,
-https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-install
+3. Install *mostbot* as a package
+   
+   Run the command `python setup.py develop`. You can also do `python setup.py install`, but it's better to keep the
+   installation linked to this directory instead of having `setuptools` package and install the bot separately. If you
+   have doubts on what I just said, https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-install
 
-Just in case, as an editor, I recommend pycharm, it's free (community edition) and it is light years ahead of the rest
-of alternatives, you are free to do whatever you want.
+4. Install a database
+   
+   Apart from the bot code, you also need a database to link the bot to. You can link it to whatever *PostgreSQL*
+   database you want, but I would recommend you to run a local instance.
+   
+   Using *Docker* and *Docker Compose* is a really good way to run packaged software. There are complete guides on the
+   internet about how to run them, but for the basics:
 
-Now you should be able to run the bot... Nope, not yet.
+  1. Install *Docker* either using your package manager or as suggested in *Docker*'s official webpage. By the way,
+     the official website method is just a *Python* script, so you can also install it with *pip* (I would discourage
+     this option).
+    
+  2. Install *Docker Compose*. Same thing as *Docker*: user either package manager or the official webpage script.
+    
+  3. Open another terminal in this folder. This new terminal will be used all the time to maintain up the database
+     while your bot is running. There are other ways to run the database in the background, but I recommend this one.
+    
+  4. In the new terminal, run `docker-compose up` to download and run the packaged software (the postgres database in
+     this case).
+    
+  5. Run `alembic upgrade head` to create the database structure by setting up all the database tables, etc.
 
-Apart from the bot code, you also need a database to link it to. You can link it to whatever postgres db you want, but
-I would recommend you to run a local instance.
+5. Launch *mosbot*
+   
+   Go back to the first terminal, and run `bot` to launch. The output of the command should be self explainatory.
 
-If you have Docker and docker-compose installed, this is a really good way to run packaged software. There are complete
-guides on the internet, on how to run them, but for the basics:
 
-* Install Docker using your package manager or as suggested in their webpage
 
-* Install docker-compose, same thing, or package manager or as in the webpage (it's just an script), btw, it's in
-  python, so you can also install it with pip, but I would discourage this
+Project structure
+-----------------
 
-* Open a terminal in this folder, this terminal will be used all the time while your bot is up to maintain up the
-  database. There are other ways to run it in the background, but I don't like them.
-
-* In the terminal in this folder, run `docker-compose up`. This will download and run the packaged software (the
-  postgres database in this case).
-
-* We now have to give structure to the database, run `alembic upgrade head` to setup all the tables etc. there.
-
-* Now, in the other terminal, you can finally launch the bot command running `bot`.
-
-The output of that command should be self explainatory. Now, you can go to the different files to read what each one
-contains. But I will outline here the structure a little:
+This is a brief outline to cover the basics of the project structure:
 
 * The more inner layer and the thing that most defines the bot is the Data Model. This are the Entities that we
   manage, and they are in `mosbot/db.py`.
@@ -69,6 +79,15 @@ inner part (db) only knows about itself. The second layer would know about db an
 you are curious, it's called clean architecture, and I have adopted it for python from some talks I saw for Android.
 
 Check out the files and please do send pull requests.
+
+
+
+Further recommendations
+-----------------------
+
+* **Editor**: I personally recommend *PyCharm*. Its *Community Edition* is free and it is light years ahead of the
+  rest of alternatives. Of course, you are free to choose whichever editor you want.
+
 
 
 Contributions
