@@ -7,8 +7,10 @@ from mosbot.query import get_user, save_user, save_track
 
 
 @pytest.mark.asyncio
-async def test_get_user(db_conn):
-    pass
+async def test_get_user(db_conn, user_generator):
+    user = await user_generator()
+    retrieved_user = await get_user(user_dict={'id': 1}, conn=db_conn)
+    assert retrieved_user == user
 
 
 @pytest.mark.asyncio

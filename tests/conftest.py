@@ -7,6 +7,7 @@ from alembic.command import downgrade, upgrade
 from alembic.config import Config
 
 from mosbot.db import get_engine
+from mosbot.query import save_user
 
 config = Config('alembic.ini')
 
@@ -59,3 +60,36 @@ async def db_conn():
         await engine.wait_closed()
 
         mosbot.query.ensure_connection = old_ensure
+
+
+def infinite_iterable():
+    while True:
+        yield None
+
+
+def int_generator():
+    for num, _ in enumerate(infinite_iterable(), start=1):
+        yield num
+
+
+def str_generator(name_format='{num}'):
+    for num, _ in enumerate(infinite_iterable(), start=1):
+        yield name_format.format(num=num)
+
+
+@pytest.fixture
+def user_generator(db_conn):
+    id_generator = int_generator()
+    username_generator = str_generator('Username {num}')
+    dtid_generator = str_generator('{num:08}-{num:04}-{num:04}-{num:04}-{num:010}')
+
+    async def generate_user():
+        user_dict = {
+            'id': next(id_generator),
+            'username': next(username_generator),
+            'dtid': next(dtid_generator),
+        }
+        user_dict = await save_user(user_dict=user_dict, conn=db_conn)
+        return user_dict
+
+    return generate_user

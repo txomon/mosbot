@@ -63,7 +63,10 @@ async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
             raise ValueError(f'Not enough parameters in select spec {user_dict}')
 
     async with ensure_connection(conn) as conn:
-        user = await (await conn.execute(sq)).first()
+        result_proxy = await conn.execute(sq)
+        if not result_proxy:
+            return None
+        user = await result_proxy.first()
         return dict(user) if user else user
 
 
@@ -81,11 +84,14 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     query = psa.insert(User) \
         .values(user_dict) \
         .on_conflict_do_update(
-            index_elements=[User.c.dtid],
-            set_=user_dict
+        index_elements=[User.c.dtid],
+        set_=user_dict
     )
     async with ensure_connection(conn) as conn:
-        user = await (await conn.execute(query)).first()
+        result_proxy = await conn.execute(query)
+        if not result_proxy:
+            return result_proxy
+        user = await result_proxy.first()
         if not user:
             return user
         user = dict(user)
