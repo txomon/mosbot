@@ -9,7 +9,7 @@ import mosbot.db as db
 
 @pytest.yield_fixture
 def engine_empty():
-    engine, db.ENGINE = db.ENGINE, None
+    engine, db.ENGINE = db.ENGINE, {}
     yield
     db.ENGINE = engine
 
@@ -22,12 +22,12 @@ def create_engine_mock():
 
 
 @pytest.mark.asyncio
-async def test_get_engine(engine_empty, create_engine_mock):
-    assert db.ENGINE is None
+async def test_get_engine(event_loop, engine_empty, create_engine_mock):
+    assert not db.ENGINE
 
     engine = await db.get_engine()
 
-    assert db.ENGINE == engine
+    assert db.ENGINE[event_loop] == engine
 
     create_engine_mock.assert_called_once_with(db.config.DATABASE_URL)
 

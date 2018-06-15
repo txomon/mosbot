@@ -84,7 +84,11 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     )
     async with ensure_connection(conn) as conn:
         user = await (await conn.execute(query)).first()
-        return dict(user) if user else user
+        if not user:
+            return user
+        user = dict(user)
+        user.update(user_dict)
+        return user
 
 
 async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:

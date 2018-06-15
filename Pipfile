@@ -1,12 +1,9 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 sqlalchemy = "*"
 click = "*"
 aiopg = "*"
@@ -14,9 +11,7 @@ alembic = "*"
 asyncio-extras = "*"
 abot = "==0.0.1a1.dev16"
 
-
 [dev-packages]
-
 pylint = "*"
 rope = "*"
 "autopep8" = "*"
@@ -28,3 +23,5 @@ pytest-cov = "*"
 pytest-asyncio = "*"
 "flake8" = "*"
 asynctest = "*"
+ipdb = "*"
+pytest-pycharm = "*"

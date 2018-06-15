@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import asyncio
+
+import weakref
+
 """db is the entities of all the application, there is no business logic (like actions on the entities), but just
 the entities that the datamodel has. It should not import anything from the rest of the file, only config allowed
 to be able to connect to the database"""
@@ -26,15 +30,16 @@ def _pg_utcnow(element, compiler, **kwargs):
     return "(statement_timestamp() AT TIME ZONE 'utc')::TIMESTAMP WITH TIME ZONE"
 
 
-ENGINE = None
+ENGINE = weakref.WeakKeyDictionary()
 
 
 async def get_engine():
     global ENGINE
-    if ENGINE:
-        return ENGINE
-    ENGINE = await asa.create_engine(config.DATABASE_URL)
-    return ENGINE
+    loop = asyncio.get_event_loop()
+    if loop in ENGINE:
+        return ENGINE[loop]
+    eng = ENGINE[loop] = await asa.create_engine(config.DATABASE_URL)
+    return eng
 
 
 metadata = sa.MetaData()
