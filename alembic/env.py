@@ -1,28 +1,23 @@
 from __future__ import with_statement
 
-import os
-from logging.config import fileConfig
+import sys
 
 from alembic import context
 from sqlalchemy import create_engine, pool
 
 from mosbot import config as mosbot_config
 from mosbot.db import metadata
+from mosbot.utils import setup_logging
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
+
 config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(
-    os.path.join(
-        os.path.dirname(
-            os.path.dirname(__file__)
-        ),
-        'mosbot/logging-debug.conf'
-    )
-)
+if 'pytest' not in sys.modules:
+    setup_logging(debug=True)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

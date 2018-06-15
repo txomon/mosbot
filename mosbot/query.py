@@ -41,6 +41,11 @@ async def ensure_connection(conn):
             await conn.close()
 
 
+async def execute_query(*, query: str, conn=None):
+    async with ensure_connection(conn) as conn:
+        return await conn.execute(query)
+
+
 async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     """
     Retrieves a user by id, or dtid or username. id is preferred
@@ -64,7 +69,7 @@ async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
 
     async with ensure_connection(conn) as conn:
         result_proxy = await conn.execute(sq)
-        if not result_proxy:
+        if result_proxy.closed:
             return None
         user = await result_proxy.first()
         return dict(user) if user else user
@@ -89,8 +94,8 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     )
     async with ensure_connection(conn) as conn:
         result_proxy = await conn.execute(query)
-        if not result_proxy:
-            return result_proxy
+        if result_proxy.closed:
+            return user_dict
         user = await result_proxy.first()
         if not user:
             return user
