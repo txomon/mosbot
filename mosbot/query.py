@@ -76,12 +76,8 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     :return: None if it failed to insert/update the user, or the user saved
     """
     assert 'username' in user_dict or 'dtid' in user_dict
-    dtid = user_dict.get('dtid')
-    if dtid is not None:
-        assert isinstance(dtid, str)
-    username = user_dict.get('username')
-    if username is not None:
-        assert isinstance(user_dict.get('username'), str)
+    assert isinstance(user_dict.get('dtid', ''), str)
+    assert isinstance(user_dict.get('username', ''), str)
     query = psa.insert(User) \
         .values(user_dict) \
         .on_conflict_do_update(
