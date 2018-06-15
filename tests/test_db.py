@@ -29,8 +29,8 @@ async def test_get_engine(event_loop, engine_empty, create_engine_mock):
 
     assert db.ENGINE[event_loop] == engine
 
-    create_engine_mock.assert_called_once_with(db.config.DATABASE_URL)
+    create_engine_mock.assert_called_once_with(db.config.DATABASE_URL, echo=False)
 
     assert engine == await db.get_engine()
 
-    create_engine_mock.assert_called_once_with(db.config.DATABASE_URL)
+    create_engine_mock.assert_called_once_with(db.config.DATABASE_URL, echo=False)

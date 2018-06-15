@@ -33,12 +33,12 @@ def _pg_utcnow(element, compiler, **kwargs):
 ENGINE = weakref.WeakKeyDictionary()
 
 
-async def get_engine():
+async def get_engine(debug=False):
     global ENGINE
     loop = asyncio.get_event_loop()
     if loop in ENGINE:
         return ENGINE[loop]
-    eng = ENGINE[loop] = await asa.create_engine(config.DATABASE_URL)
+    eng = ENGINE[loop] = await asa.create_engine(config.DATABASE_URL, echo=debug)
     return eng
 
 

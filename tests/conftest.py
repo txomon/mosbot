@@ -34,6 +34,8 @@ async def db_conn():
     import mosbot.query
     from asyncio_extras import async_contextmanager
 
+    await mosbot.db.get_engine(True)
+
     async with mosbot.query.ensure_connection(None) as roll_conn:
         @async_contextmanager
         async def ensure_connection(conn=None):
@@ -82,12 +84,14 @@ def user_generator(db_conn):
     id_generator = int_generator()
     username_generator = str_generator('Username {num}')
     dtid_generator = str_generator('{num:08}-{num:04}-{num:04}-{num:04}-{num:010}')
+    country_generator = str_generator('Country {num}')
 
     async def generate_user():
         user_dict = {
             'id': next(id_generator),
             'username': next(username_generator),
             'dtid': next(dtid_generator),
+            'country': next(country_generator),
         }
         user_dict = await save_user(user_dict=user_dict, conn=db_conn)
         return user_dict
