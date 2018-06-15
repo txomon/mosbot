@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import itertools
+
+import datetime
 import pytest
 from aiopg import Connection
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
 
 from mosbot.db import get_engine
-from mosbot.query import save_user
+from mosbot.query import save_user, save_track, save_playback
 
 config = Config('alembic.ini')
 
@@ -70,13 +73,21 @@ def infinite_iterable():
 
 
 def int_generator():
-    for num, _ in enumerate(infinite_iterable(), start=1):
+    for num in itertools.count(start=1):
         yield num
 
 
 def str_generator(name_format='{num}'):
-    for num, _ in enumerate(infinite_iterable(), start=1):
+    for num in itertools.count(start=1):
         yield name_format.format(num=num)
+
+
+def datetime_generator(timedelta=None):
+    # TODO: Finish this
+    if timedelta is None:
+        timedelta = datetime.timedelta(seconds=1)
+    for num in itertools.count(start=1):
+        yield num
 
 
 @pytest.fixture
@@ -86,14 +97,78 @@ def user_generator(db_conn):
     dtid_generator = str_generator('{num:08}-{num:04}-{num:04}-{num:04}-{num:010}')
     country_generator = str_generator('Country {num}')
 
-    async def generate_user():
+    async def generate_user(id=None, username=None, dtid=None, country=None):
+        if id is None:
+            id = next(id_generator)
+        if username is None:
+            username = next(username_generator)
+        if dtid is None:
+            dtid = next(dtid_generator)
+        if country is None:
+            country = next(country_generator)
         user_dict = {
-            'id': next(id_generator),
-            'username': next(username_generator),
-            'dtid': next(dtid_generator),
-            'country': next(country_generator),
+            'id': id,
+            'username': username,
+            'dtid': dtid,
+            'country': country,
         }
         user_dict = await save_user(user_dict=user_dict, conn=db_conn)
         return user_dict
 
     return generate_user
+
+
+@pytest.fixture
+def track_generator(db_conn):
+    id_generator = int_generator()
+    length_generator = int_generator()
+    origin_generator = str_generator('Origin {num}')
+    extid_generator = str_generator('Extid {num}')
+    name_generator = str_generator('Name {num}')
+
+    async def generate_track(id=None, length=None, origin=None, extid=None,
+                             name=None):
+        if id is None:
+            id = next(id_generator)
+        if length is None:
+            length = next(length_generator)
+        if origin is None:
+            origin = next(origin_generator)
+        if extid is None:
+            extid = next(extid_generator)
+        if name is None:
+            name = next(name_generator)
+        track_dict = {
+            'id': id,
+            'length': length,
+            'origin': origin,
+            'extid': extid,
+            'name': name,
+        }
+        track_dict = await save_track(track_dict=track_dict, conn=db_conn)
+        return track_dict
+
+    return generate_track
+
+
+@pytest.fixture
+def playback_generator(db_conn):
+    id_generator = int_generator()
+    start_generator = datetime_generator()
+
+    async def generate_playback(*, id=None, start=None, user_id, track_id):
+        if id is None:
+            id = next(id_generator)
+        if start is None:
+            start = next(start_generator)
+        playback_dict = {
+            'id': id,
+            'track_id': track_id,
+            'user_id': user_id,
+            'start': start,
+        }
+        playback_dict = await save_playback(playback_dict=playback_dict,
+                                            conn=db_conn)
+        return playback_dict
+
+    return generate_playback

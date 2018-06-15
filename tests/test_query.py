@@ -12,6 +12,9 @@ async def test_get_user(db_conn, user_generator):
     retrieved_user = await get_user(user_dict={'id': 1}, conn=db_conn)
     assert retrieved_user == user
 
+    retrieved_user = await get_user(user_dict={'username': 'Username 1'}, conn=db_conn)
+    assert retrieved_user == user
+
 
 @pytest.mark.asyncio
 async def test_save_user(db_conn):
