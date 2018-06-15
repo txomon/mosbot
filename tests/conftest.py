@@ -5,6 +5,7 @@ import pytest
 from aiopg import Connection
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
+from async_generator import async_generator
 
 config = Config('alembic.ini')
 
@@ -17,13 +18,14 @@ def database():
 
 
 @pytest.yield_fixture()
+@pytest.mark.asyncio
 async def db_conn():
     import mosbot.query
     from asyncio_extras import async_contextmanager
 
-    async with mosbot.query.ensure_connection() as roll_conn:
+    async with mosbot.query.ensure_connection(None) as roll_conn:
         @async_contextmanager
-        async def ensure_connection(conn):
+        async def ensure_connection(conn=None):
             provided_connection = bool(conn)
             if not provided_connection:
                 conn = roll_conn
