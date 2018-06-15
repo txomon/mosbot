@@ -97,7 +97,7 @@ def user_generator(db_conn):
     dtid_generator = str_generator('{num:08}-{num:04}-{num:04}-{num:04}-{num:010}')
     country_generator = str_generator('Country {num}')
 
-    async def generate_user(id=None, username=None, dtid=None, country=None):
+    async def generate_user(*, id=None, username=None, dtid=None, country=None):
         if id is None:
             id = next(id_generator)
         if username is None:

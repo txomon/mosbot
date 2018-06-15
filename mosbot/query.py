@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+from mosbot.db import psa, Origin
 
 """To have a clean architecture, here are modeled operations over the db file. This file should not import anything
 else than db and config if any.
@@ -138,10 +139,10 @@ async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
     :return: None if it failed, the updated track if not
     """
     assert track_dict
-    assert isinstance(track_dict.get('length', ''), int)
-    assert isinstance(track_dict.get('origin', ''), str)
-    assert isinstance(track_dict.get('extid', ''), str)
-    assert isinstance(track_dict.get('name', ''), str)
+    assert isinstance(track_dict.get('length'), int)
+    assert isinstance(track_dict.get('origin'), (str, Origin))
+    assert isinstance(track_dict.get('extid'), str)
+    assert isinstance(track_dict.get('name'), str)
     query = psa.insert(Track) \
         .values(track_dict) \
         .on_conflict_do_update(

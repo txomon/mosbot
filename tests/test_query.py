@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
+from mosbot.db import Origin
 
 import pytest
 
@@ -42,35 +43,21 @@ async def test_save_user(db_conn):
     with pytest.raises(Exception):
         await save_user(user_dict=user_dict, conn=db_conn)
 
-
+@pytest.mark.parametrize("track_dict, raises_exception, id_value", [
+    ({'extid': 'ab12', 'origin': 'youtube', 'length': 120,      'name': 'One name'}, False, 1),
+    ({'extid': 'ab12', 'origin': Origin.youtube, 'length': 120, 'name': 'One name'}, False, 2),
+    ({'extid': 12345,  'origin': 'youtube', 'length': 120,      'name': 'One name'}, True, None),
+    ({'extid': 'ab12', 'origin': 'youtube', 'length': '120',    'name': 'One name'}, True, None),
+    ({'extid': 'ab12', 'origin': (1, 2),    'length': 120,      'name': 'One name'}, True, None),
+    ({'extid': 'ab12', 'origin': 'youtube', 'length': 120,      'name': 12345},      True, None),
+    ({},                                                                             True, None),
+])
 @pytest.mark.asyncio
-async def test_save_track(db_conn):
-    # empty track_dict
-    with pytest.raises(AssertionError):
-        await save_track(track_dict={}, conn=db_conn)
-
-    # correct track_dict
-    track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 100, 'name': 'One name'}
-    actual_result = await save_track(track_dict=track_dict, conn=db_conn)
-    expected_result = dict(id=1, **track_dict)
-    assert actual_result == expected_result
-
-    # corrupted track_dict.extid
-    track_dict = {'extid': 1234, 'origin': 'youtube', 'length': 100, 'name': 'One name'}
-    with pytest.raises(Exception):
-        await save_track(track_dict=track_dict, conn=db_conn)
-
-    # corrupted track_dict.origin
-    track_dict = {'extid': 'one external id', 'origin': (1, 2), 'length': 100, 'name': 'One name'}
-    with pytest.raises(Exception):
-        await save_track(track_dict=track_dict, conn=db_conn)
-
-    # corrupted track_dict.length
-    track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 'qwerty', 'name': 'One name'}
-    with pytest.raises(Exception):
-        await save_track(track_dict=track_dict, conn=db_conn)
-
-    # corrupted track_dict.name
-    track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 100, 'name': 1234}
-    with pytest.raises(Exception):
-        await save_track(track_dict=track_dict, conn=db_conn)
+async def test_save_track(db_conn, track_dict, raises_exception, id_value):
+    if raises_exception:
+        with pytest.raises(AssertionError):
+            await save_track(track_dict=track_dict, conn=db_conn)
+    else:
+        actual_result = await save_track(track_dict=track_dict, conn=db_conn)
+        expected_result = dict(id=id_value, **track_dict)
+        assert actual_result == expected_result
