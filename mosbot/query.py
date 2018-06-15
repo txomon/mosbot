@@ -137,7 +137,11 @@ async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
     :param conn: A connection if any open
     :return: None if it failed, the updated track if not
     """
-    assert track_dict  # TODO: Check if this is good enough
+    assert track_dict
+    assert isinstance(track_dict.get('length', ''), int)
+    assert isinstance(track_dict.get('origin', ''), str)
+    assert isinstance(track_dict.get('extid', ''), str)
+    assert isinstance(track_dict.get('name', ''), str)
     query = psa.insert(Track) \
         .values(track_dict) \
         .on_conflict_do_update(

@@ -81,11 +81,11 @@ Track = sa.Table('track', metadata,
     versions. Tracks are only saved once, in that there is a unique check of origin/extid.
 
     :param int id: Track id, unique in the DB, not externally generated
-    :param int length: How long is the track.
-    :param Origin origin: The origin (usually youtube)
-    :param str extid: The id of the track, this one comes from youtube
-    :param str name: The name of the track in youtube, it is not usually useful, but it's a good thing when speaking
-    to humans
+    :param int length: Track duration in seconds
+    :param Origin origin: Source of the track (usually YouTube)
+    :param str extid: The id of the track had in the source (usually the track id in YouTube)
+    :param str name: The name of the track in the source (usually the track name in YouTube). It's not always useful,
+    but it's convenient when speaking to humans
 """
 
 Playback = sa.Table('playback', metadata,

@@ -48,4 +48,26 @@ async def test_save_track(db_conn):
 
     # correct track_dict
     track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 100, 'name': 'One name'}
-    result = await save_track(track_dict=track_dict, conn=db_conn)
+    actual_result = await save_track(track_dict=track_dict, conn=db_conn)
+    expected_result = dict(id=1, **track_dict)
+    assert actual_result == expected_result
+
+    # corrupted track_dict.extid
+    track_dict = {'extid': 1234, 'origin': 'youtube', 'length': 100, 'name': 'One name'}
+    with pytest.raises(Exception):
+        await save_track(track_dict=track_dict, conn=db_conn)
+
+    # corrupted track_dict.origin
+    track_dict = {'extid': 'one external id', 'origin': (1, 2), 'length': 100, 'name': 'One name'}
+    with pytest.raises(Exception):
+        await save_track(track_dict=track_dict, conn=db_conn)
+
+    # corrupted track_dict.length
+    track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 'qwerty', 'name': 'One name'}
+    with pytest.raises(Exception):
+        await save_track(track_dict=track_dict, conn=db_conn)
+
+    # corrupted track_dict.name
+    track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 100, 'name': 1234}
+    with pytest.raises(Exception):
+        await save_track(track_dict=track_dict, conn=db_conn)
