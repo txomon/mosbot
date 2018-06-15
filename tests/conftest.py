@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
-import asyncio
-
-import logging
 import pytest
-import threading
 from aiopg import Connection
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
-from async_generator import async_generator
+
+from mosbot.db import get_engine
 
 config = Config('alembic.ini')
+
 
 @pytest.yield_fixture(scope='session', autouse=True)
 def database():
@@ -55,4 +53,9 @@ async def db_conn():
 
         await trans.rollback()
         await roll_conn.close()
+        # This four lines are required to close the engine properly
+        engine = await get_engine()
+        engine.close()
+        await engine.wait_closed()
+
         mosbot.query.ensure_connection = old_ensure

@@ -41,9 +41,9 @@ async def test_save_user(db_conn):
 @pytest.mark.asyncio
 async def test_save_track(db_conn):
     # empty track_dict
-    result = await save_track(track_dict=True, conn=db_conn)
-    # result = await save_track(track_dict={}, conn=db_conn)
-    assert result is None
+    with pytest.raises(AssertionError):
+        await save_track(track_dict={}, conn=db_conn)
 
     # correct track_dict
-    track_dict = {'extid': '???', 'origin': '???'}
+    track_dict = {'extid': 'one external id', 'origin': 'youtube', 'length': 100, 'name': 'One name'}
+    result = await save_track(track_dict=track_dict, conn=db_conn)

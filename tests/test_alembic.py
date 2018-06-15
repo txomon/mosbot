@@ -18,6 +18,8 @@ async def test_upgrade():
     conn = await engine.acquire()
     await conn.execute('drop schema public cascade; create schema public;')
     upgrade(config, 'head')
+    engine.terminate()
+    await engine.wait_closed()
 
 
 def test_downgrade():
