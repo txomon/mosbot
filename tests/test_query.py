@@ -61,8 +61,11 @@ async def test_get_user(db_conn, user_generator):
     assert retrieved_user == user
 
 
+@pytest.mark.parametrize('user_dict, raises_exception', (
+        ({}, False), # TODO
+))
 @pytest.mark.asyncio
-async def test_save_user(db_conn):
+async def test_save_user(db_conn, user_dict, raises_exception):
     # empty user
     with pytest.raises(AssertionError):
         await save_user(user_dict={})
@@ -105,4 +108,5 @@ async def test_save_track(db_conn, track_dict, raises_exception):
     else:
         actual_result = await save_track(track_dict=track_dict, conn=db_conn)
         expected_result = dict(id=1, **track_dict)
+        expected_result['origin'] = Origin.youtube
         assert actual_result == expected_result

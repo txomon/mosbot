@@ -73,12 +73,7 @@ async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
         else:
             raise ValueError(f'Not enough parameters in select spec {user_dict}')
 
-    async with ensure_connection(conn) as conn:
-        result_proxy = await conn.execute(sq)
-        if result_proxy.closed:
-            return None
-        user = await result_proxy.first()
-        return dict(user) if user else user
+    return await execute_and_first(query=sq, conn=conn)
 
 
 async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
@@ -94,20 +89,12 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     assert isinstance(user_dict.get('username', ''), str)
     query = psa.insert(User) \
         .values(user_dict) \
+        .returning(User) \
         .on_conflict_do_update(
         index_elements=[User.c.dtid],
         set_=user_dict
     )
-    async with ensure_connection(conn) as conn:
-        result_proxy = await conn.execute(query)
-        if result_proxy.closed:
-            return user_dict
-        user = await result_proxy.first()
-        if not user:
-            return user
-        user = dict(user)
-        user.update(user_dict)
-        return user
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
@@ -150,17 +137,12 @@ async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
     assert isinstance(track_dict.get('name'), str)
     query = psa.insert(Track) \
         .values(track_dict) \
+        .returning(Track) \
         .on_conflict_do_update(
         index_elements=[Track.c.extid, Track.c.origin],
         set_=track_dict
     )
-    async with ensure_connection(conn) as conn:
-        track = await (await conn.execute(query)).first()
-        if not track:
-            return track
-        track = dict(track)
-        track.update(track_dict)
-        return track
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def get_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
@@ -196,6 +178,7 @@ async def save_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
     assert {'track_id', 'start', 'user_id'} <= set(playback_dict.keys())
     query = psa.insert(Playback) \
         .values(playback_dict) \
+        .returning(Playback) \
         .on_conflict_do_update(
         index_elements=[Playback.c.start],
         set_=playback_dict
