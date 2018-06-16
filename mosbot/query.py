@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
-from mosbot.db import psa, Origin
 
 """To have a clean architecture, here are modeled operations over the db file. This file should not import anything
 else than db and config if any.
@@ -17,7 +16,7 @@ from asyncio_extras import async_contextmanager
 from sqlalchemy.dialects import postgresql as psa
 
 from mosbot import db
-from mosbot.db import Action, Playback, Track, User, UserAction, get_engine
+from mosbot.db import Action, Origin, Playback, Track, User, UserAction, get_engine
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +41,15 @@ async def ensure_connection(conn):
             await conn.close()
 
 
-async def execute_query(*, query: str, conn=None):
+async def execute_and_first(*, query, conn=None):
     async with ensure_connection(conn) as conn:
-        return await conn.execute(query)
+        result_proxy = await conn.execute(query)
+        if result_proxy.closed:
+            raise ValueError('ResultProxy closed!?')  # TODO: DEBUG this
+        data = await result_proxy.first()
+        if not data:
+            return {}
+        return dict(data)
 
 
 async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:

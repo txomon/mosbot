@@ -55,6 +55,14 @@ async def db_conn():
 
         trans: Connection = await roll_conn.begin()
 
+        # Restart all sequences to avoid id changes
+        sequences = await roll_conn.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S';")
+        sequences = (s[0] for s in await sequences.fetchall())
+
+        restart_sequences = ";".join(f'alter sequence {seq} restart' for seq in sequences)
+
+        await roll_conn.execute(restart_sequences)
+
         yield roll_conn
 
         await trans.rollback()
@@ -83,11 +91,10 @@ def str_generator(name_format='{num}'):
 
 
 def datetime_generator(timedelta=None):
-    # TODO: Finish this
     if timedelta is None:
         timedelta = datetime.timedelta(seconds=1)
     for num in itertools.count(start=1):
-        yield num
+        yield datetime.datetime(year=0, month=1, day=1) + timedelta * num
 
 
 @pytest.fixture
@@ -121,7 +128,7 @@ def user_generator(db_conn):
 @pytest.fixture
 def track_generator(db_conn):
     id_generator = int_generator()
-    length_generator = int_generator()
+    length_generator = itertools.repeat(120)
     origin_generator = str_generator('Origin {num}')
     extid_generator = str_generator('Extid {num}')
     name_generator = str_generator('Name {num}')
@@ -154,7 +161,7 @@ def track_generator(db_conn):
 @pytest.fixture
 def playback_generator(db_conn):
     id_generator = int_generator()
-    start_generator = datetime_generator()
+    start_generator = datetime_generator(datetime.timedelta(seconds=120))
 
     async def generate_playback(*, id=None, start=None, user_id, track_id):
         if id is None:
