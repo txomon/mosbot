@@ -110,12 +110,10 @@ async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
 
     if 'id' in track_dict:
         sq = sq.where(Track.c.id == track_dict['id'])
-    elif 'extid' in track_dict:
+    else:
         sq = sq.where(Track.c.extid == track_dict['extid'])
         if 'origin' in track_dict:
             sq = sq.where(Track.c.origin == track_dict['origin'])
-    else:
-        raise ValueError(f'Not enough parameters for selecting Track, {track_dict}')
 
     async with ensure_connection(conn) as conn:
         track = await (await conn.execute(sq)).first()

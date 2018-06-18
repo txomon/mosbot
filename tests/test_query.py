@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy.dialects import postgresql as psa
 
 from mosbot.db import Origin, User
-from mosbot.query import get_user, save_user, save_track, execute_and_first
+from mosbot.query import get_user, save_user, save_track, execute_and_first, get_track
 
 
 @pytest.mark.parametrize('data_dict,expected_result', (
@@ -29,7 +29,7 @@ from mosbot.query import get_user, save_user, save_track, execute_and_first
     'all_values',
     'all_values_with_null',
     'not_nullable_value',
-    'not_autogen_not_nullable_value'
+    'not_autogen_not_nullable_value',
 ])
 @pytest.mark.asyncio
 async def test_execute_and_first(db_conn, data_dict, expected_result):
@@ -52,17 +52,24 @@ async def test_execute_and_first(db_conn, data_dict, expected_result):
 
 
 @pytest.mark.asyncio
-async def test_get_user(db_conn, user_generator):
+@pytest.mark.parametrize('user_dict, fails', (
+        ({'id': 1}, False),
+        ({'username': 'Username 1'}, False),
+        ({'dtid': '00000001-0001-0001-0001-0000000001'}, False),
+        ({'country': 'Country 1'}, ValueError),
+), ids=['by_id', 'by_usernam', 'by_dtid', 'failing_by_country'])
+async def test_get_user(db_conn, user_generator, user_dict, fails):
     user = await user_generator()
-    retrieved_user = await get_user(user_dict={'id': 1}, conn=db_conn)
-    assert retrieved_user == user
-
-    retrieved_user = await get_user(user_dict={'username': 'Username 1'}, conn=db_conn)
-    assert retrieved_user == user
+    if fails:
+        with pytest.raises(fails):
+            await get_user(user_dict=user_dict, conn=db_conn)
+    else:
+        retrieved_user = await get_user(user_dict=user_dict, conn=db_conn)
+        assert retrieved_user == user
 
 
 @pytest.mark.parametrize('user_dict, raises_exception', (
-        ({}, False), # TODO
+        ({}, False),  # TODO
 ))
 @pytest.mark.asyncio
 async def test_save_user(db_conn, user_dict, raises_exception):
@@ -73,7 +80,7 @@ async def test_save_user(db_conn, user_dict, raises_exception):
     # correct user
     user_dict = {'username': 'The User', 'dtid': '0123456789theuser'}
     actual_result = await save_user(user_dict=user_dict, conn=db_conn)
-    expected_result = dict(id=1, **user_dict)
+    expected_result = dict(id=1, country=None, **user_dict)
     assert expected_result == actual_result
 
     # duplicated user
@@ -89,6 +96,24 @@ async def test_save_user(db_conn, user_dict, raises_exception):
     user_dict = {'username': '1982', 'dtid': 123456789}
     with pytest.raises(Exception):
         await save_user(user_dict=user_dict, conn=db_conn)
+
+
+@pytest.mark.parametrize('track_dict, fails', (
+        ({'id': 1}, False),
+        ({'extid': 'Extid 1'}, False),
+        ({'origin': 'youtube'}, AssertionError),
+        ({'length': 120}, AssertionError),
+        ({'extid': 'Extid 1', 'origin': 'youtube'}, False),
+), ids=['by_id', 'by_extid', 'by_origin', 'by_length', 'by_extid+origin'], )
+@pytest.mark.asyncio
+async def test_get_track(db_conn, track_generator, track_dict, fails):
+    track = await track_generator()
+    if fails:
+        with pytest.raises(fails):
+            await get_track(track_dict=track_dict, conn=db_conn)
+    else:
+        retrieved_track = await get_track(track_dict=track_dict, conn=db_conn)
+        assert retrieved_track == track
 
 
 @pytest.mark.parametrize("track_dict, raises_exception", [

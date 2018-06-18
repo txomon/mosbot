@@ -129,7 +129,7 @@ def user_generator(db_conn):
 def track_generator(db_conn):
     id_generator = int_generator()
     length_generator = itertools.repeat(120)
-    origin_generator = str_generator('Origin {num}')
+    origin_generator = itertools.cycle(['youtube', 'soundcloud'])
     extid_generator = str_generator('Extid {num}')
     name_generator = str_generator('Name {num}')
 
