@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import datetime
 import pytest
 from sqlalchemy.dialects import postgresql as psa
 
 from mosbot.db import Origin, User
-from mosbot.query import get_user, save_user, save_track, execute_and_first, get_track
+from mosbot.query import get_user, save_user, save_track, execute_and_first, get_track, get_playback, save_playback
 
 
 @pytest.mark.parametrize('data_dict,expected_result', (
@@ -52,16 +53,16 @@ async def test_execute_and_first(db_conn, data_dict, expected_result):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('user_dict, fails', (
+@pytest.mark.parametrize('user_dict, raises_exception', (
         ({'id': 1}, False),
         ({'username': 'Username 1'}, False),
         ({'dtid': '00000001-0001-0001-0001-0000000001'}, False),
         ({'country': 'Country 1'}, ValueError),
 ), ids=['by_id', 'by_usernam', 'by_dtid', 'failing_by_country'])
-async def test_get_user(db_conn, user_generator, user_dict, fails):
+async def test_get_user(db_conn, user_generator, user_dict, raises_exception):
     user = await user_generator()
-    if fails:
-        with pytest.raises(fails):
+    if raises_exception:
+        with pytest.raises(raises_exception):
             await get_user(user_dict=user_dict, conn=db_conn)
     else:
         retrieved_user = await get_user(user_dict=user_dict, conn=db_conn)
@@ -98,7 +99,7 @@ async def test_save_user(db_conn, user_dict, raises_exception):
         await save_user(user_dict=user_dict, conn=db_conn)
 
 
-@pytest.mark.parametrize('track_dict, fails', (
+@pytest.mark.parametrize('track_dict, raises_exception', (
         ({'id': 1}, False),
         ({'extid': 'Extid 1'}, False),
         ({'origin': 'youtube'}, AssertionError),
@@ -106,10 +107,10 @@ async def test_save_user(db_conn, user_dict, raises_exception):
         ({'extid': 'Extid 1', 'origin': 'youtube'}, False),
 ), ids=['by_id', 'by_extid', 'by_origin', 'by_length', 'by_extid+origin'], )
 @pytest.mark.asyncio
-async def test_get_track(db_conn, track_generator, track_dict, fails):
+async def test_get_track(db_conn, track_generator, track_dict, raises_exception):
     track = await track_generator()
-    if fails:
-        with pytest.raises(fails):
+    if raises_exception:
+        with pytest.raises(raises_exception):
             await get_track(track_dict=track_dict, conn=db_conn)
     else:
         retrieved_track = await get_track(track_dict=track_dict, conn=db_conn)
@@ -117,21 +118,74 @@ async def test_get_track(db_conn, track_generator, track_dict, fails):
 
 
 @pytest.mark.parametrize("track_dict, raises_exception", [
-    ({'extid': 'ab12', 'origin': 'youtube', 'length': 120, 'name': 'One name'}, False),
-    ({'extid': 'ab12', 'origin': Origin.youtube, 'length': 120, 'name': 'One name'}, False),
-    ({'extid': 12345, 'origin': 'youtube', 'length': 120, 'name': 'One name'}, True),
-    ({'extid': 'ab12', 'origin': 'youtube', 'length': '120', 'name': 'One name'}, True),
-    ({'extid': 'ab12', 'origin': (1, 2), 'length': 120, 'name': 'One name'}, True),
-    ({'extid': 'ab12', 'origin': 'youtube', 'length': 120, 'name': 12345}, True),
-    ({}, True),
-])
+    ({'extid': 'ab12', 'origin': 'youtube', 'length': 120, 'name': 'One name'}, None),
+    ({'extid': 'ab12', 'origin': Origin.youtube, 'length': 120, 'name': 'One name'}, None),
+    ({'extid': 12345, 'origin': 'youtube', 'length': 120, 'name': 'One name'}, AssertionError),
+    ({'extid': 'ab12', 'origin': 'youtube', 'length': '120', 'name': 'One name'}, AssertionError),
+    ({'extid': 'ab12', 'origin': (1, 2), 'length': 120, 'name': 'One name'}, AssertionError),
+    ({'extid': 'ab12', 'origin': 'youtube', 'length': 120, 'name': 12345}, AssertionError),
+    ({}, AssertionError),
+], ids=['good_with_string', 'good_with_enum', 'bad_with_int', 'bad_with_string', 'bad_with_tuple', 'bad_with_int_name',
+        'bad_no_data'])
 @pytest.mark.asyncio
 async def test_save_track(db_conn, track_dict, raises_exception):
     if raises_exception:
-        with pytest.raises(AssertionError):
+        with pytest.raises(raises_exception):
             await save_track(track_dict=track_dict, conn=db_conn)
     else:
         actual_result = await save_track(track_dict=track_dict, conn=db_conn)
         expected_result = dict(id=1, **track_dict)
         expected_result['origin'] = Origin.youtube
         assert actual_result == expected_result
+
+
+@pytest.mark.parametrize('playback_dict, raises_exception', (
+        ({'id': 1}, False),
+        ({'start': datetime.datetime(year=1, month=1, day=1)}, False),
+        ({'track_id': 1}, ValueError),
+        ({'user_id': 1}, ValueError),
+), ids=['by_id', 'by_start', 'by_track_id', 'by_user_id'], )
+@pytest.mark.asyncio
+async def test_get_playback(
+        db_conn,
+        track_generator,
+        user_generator,
+        playback_generator,
+        playback_dict,
+        raises_exception,
+):
+    track = await track_generator()
+    user = await user_generator()
+    playback = await playback_generator(user_id=user['id'], track_id=track['id'])
+    if raises_exception:
+        with pytest.raises(raises_exception):
+            await get_playback(playback_dict=playback_dict, conn=db_conn)
+    else:
+        retrieved_playback = await get_playback(playback_dict=playback_dict, conn=db_conn)
+        assert retrieved_playback == playback
+
+
+@pytest.mark.parametrize("playback_dict, raises_exception", [
+    ({'start': datetime.datetime(1, 1, 1), 'user_id': 1, 'track_id': 1}, None),
+    ({'start': '0001-01-01', 'user_id': 1, 'track_id': 1}, None),
+    ({'start': datetime.datetime(1, 1, 1), 'user_id': '1', 'track_id': 1}, None),
+    ({'start': datetime.datetime(1, 1, 1), 'user_id': 1, 'track_id': '1'}, None),
+    ({}, AssertionError),
+], ids=['good', 'bad_with_date_string', 'bad_with_uid_string', 'bad_with_tid_string', 'bad_no_data'])
+@pytest.mark.asyncio
+async def test_save_playback(
+        db_conn,
+        track_generator,
+        user_generator,
+        playback_dict,
+        raises_exception,
+):
+    await track_generator()
+    await user_generator()
+    if raises_exception:
+        with pytest.raises(raises_exception):
+            await save_playback(playback_dict=playback_dict, conn=db_conn)
+    else:
+        actual_result = await save_playback(playback_dict=playback_dict, conn=db_conn)
+        db_data = await get_playback(playback_dict={'id': 1}, conn=db_conn)
+        assert db_data == actual_result

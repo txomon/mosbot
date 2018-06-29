@@ -93,8 +93,8 @@ def str_generator(name_format='{num}'):
 def datetime_generator(timedelta=None):
     if timedelta is None:
         timedelta = datetime.timedelta(seconds=1)
-    for num in itertools.count(start=1):
-        yield datetime.datetime(year=0, month=1, day=1) + timedelta * num
+    for num in itertools.count():
+        yield datetime.datetime(year=1, month=1, day=1) + timedelta * num
 
 
 @pytest.fixture
