@@ -26,15 +26,46 @@ async def save_history_songs():
     It makes parallel queries and everything to maximise throughput.
 
     Saves previous to first unsuccessful storage, or last successful. This is, it doesn't save 5 if 4 failed."""
-    engine = await db.get_engine()
     last_song = await load_bot_data(BotConfig.last_saved_history)
     if not last_song:
         logger.error('There is no bot data regarding last saved playback')
         return
 
+    history_songs = await dubtrack_songs_since_ts(last_song)
+
+    await persist_history(history_songs)
+
+
+async def persist_history(history_songs):
+    engine = await db.get_engine()
+    songs = []
+    tasks = {}
+    # Logic here: [ ][ ][s][s][ ][s][ ]
+    # Groups:     \-/\-/\-------/\----/
+    logger.info('Saving data chunks in database')
+    for played, song in sorted(history_songs.items()):
+        songs.append(song)
+        if not song['skipped']:
+            tasks[played] = asyncio.ensure_future(
+                save_history_chunk(songs, await engine.acquire())
+            )
+            songs = []
+    logger.debug('Waiting for data to be saved')
+    await asyncio.wait(tasks.values())
+    last_successful_song = None
+    for last_song, task in sorted(tasks.items()):
+        if task.exception():
+            logger.error(f'Saving task failed at {last_song}')
+            break
+        last_successful_song = last_song
+    if last_successful_song:
+        logger.info(f'Successfully saved until {last_successful_song}')
+        await save_bot_data(BotConfig.last_saved_history, last_successful_song)
+
+
+async def dubtrack_songs_since_ts(last_song):
     dws = DubtrackWS()
     await dws.initialize()
-
     history_songs = {}
     found_last_song = False
     played = time.time()
@@ -49,32 +80,7 @@ async def save_history_songs():
             if played <= last_song:
                 found_last_song = True
             history_songs[played] = song
-
-    songs = []
-    tasks = {}
-    # Logic here: [ ][ ][s][s][ ][s][ ]
-    # Groups:     \-/\-/\-------/\----/
-    logger.info('Saving data chunks in database')
-    for played, song in sorted(history_songs.items()):
-        songs.append(song)
-        if not song['skipped']:
-            tasks[played] = asyncio.ensure_future(
-                save_history_chunk(songs, await engine.acquire())
-            )
-            songs = []
-
-    logger.debug('Waiting for data to be saved')
-    await asyncio.wait(tasks.values())
-
-    last_successful_song = None
-    for last_song, task in sorted(tasks.items()):
-        if task.exception():
-            logger.error(f'Saving task failed at {last_song}')
-            break
-        last_successful_song = last_song
-    if last_successful_song:
-        logger.info(f'Successfully saved until {last_successful_song}')
-        await save_bot_data(BotConfig.last_saved_history, last_successful_song)
+    return history_songs
 
 
 async def save_history_chunk(songs, conn: asa.SAConnection):
