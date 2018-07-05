@@ -5,9 +5,10 @@ import datetime
 import pytest
 from sqlalchemy.dialects import postgresql as psa
 
-from mosbot.db import Origin, User
+from mosbot.db import Origin, User, Action
 from mosbot.query import get_user, save_user, save_track, execute_and_first, get_track, get_playback, save_playback, \
-    get_user_action, save_user_action, save_bot_data, load_bot_data
+    get_user_action, save_user_action, save_bot_data, load_bot_data, get_last_playback, get_user_user_actions, \
+    get_user_dub_user_actions, get_dub_action, get_opposite_dub_action, query_simplified_user_actions
 
 
 @pytest.mark.parametrize('data_dict,expected_result', (
@@ -270,6 +271,7 @@ async def test_save_user_action(
 @pytest.mark.asyncio
 async def test_bot_data(db_conn, bot_data, raises_exception):
     key, value = bot_data
+    assert None is await load_bot_data(key=key, conn=db_conn)
     if raises_exception:
         with pytest.raises(raises_exception):
             await save_bot_data(key=key, value=value, conn=db_conn)
@@ -281,14 +283,126 @@ async def test_bot_data(db_conn, bot_data, raises_exception):
 
 
 @pytest.mark.asyncio
-async def test_bot_data_duplicate_insert(db_conn):
-    bot_data = await load_bot_data(key='id', conn=db_conn)
-    assert bot_data is None
+async def test_get_last_playback(
+        db_conn,
+        track_generator,
+        user_generator,
+        playback_generator,
+):
+    track = await track_generator()
+    user = await user_generator()
+    for _ in range(6):
+        expected_playback = await playback_generator(user=user, track=track)
+    playback = await get_last_playback(conn=db_conn)
+    assert expected_playback == playback
 
-    await save_bot_data(key='id', value=123, conn=db_conn)
-    bot_data = await load_bot_data(key='id', conn=db_conn)
-    assert bot_data == 123
 
-    await save_bot_data(key='id', value='val', conn=db_conn)
-    bot_data = await load_bot_data(key='id', conn=db_conn)
-    assert bot_data == 'val'
+@pytest.mark.asyncio
+async def test_get_user_user_actions(
+        db_conn,
+        track_generator,
+        user_generator,
+        playback_generator,
+        user_action_generator,
+):
+    track = await track_generator()
+    user = await user_generator()
+    expected_user_actions = set()
+    for _ in range(6):
+        playback = await playback_generator(user=user, track=track)
+        for _ in range(6):
+            user_action = await user_action_generator(user=user, playback=playback)
+            expected_user_actions.add(tuple(sorted(user_action.items())))
+
+    user_actions = await get_user_user_actions(user_id=user['id'], conn=db_conn)
+    user_actions = {tuple(sorted(ua.items())) for ua in user_actions}
+
+    assert user_actions == expected_user_actions
+
+
+@pytest.mark.asyncio
+async def test_user_dub_user_actions(
+        db_conn,
+        track_generator,
+        user_generator,
+        playback_generator,
+        user_action_generator,
+):
+    track = await track_generator()
+    user = await user_generator()
+    expected_user_actions = set()
+    for _ in range(6):
+        playback = await playback_generator(user=user, track=track)
+        for _ in range(6):
+            user_action = await user_action_generator(user=user, playback=playback)
+            if user_action['action'] not in ['upvote', 'downvote']:
+                continue
+            expected_user_actions.add(tuple(sorted(user_action.items())))
+
+    user_actions = await get_user_dub_user_actions(user_id=user['id'], conn=db_conn)
+    user_actions = {tuple(sorted(ua.items())) for ua in user_actions}
+
+    assert user_actions == expected_user_actions
+
+
+@pytest.mark.parametrize('input,output', (
+        ('upvote', Action.upvote),
+        ('updub', Action.upvote),
+        ('updubs', Action.upvote),
+        ('downvote', Action.downvote),
+        ('downdub', Action.downvote),
+        ('downdubs', Action.downvote),
+        ('none', None),
+))
+def test_get_dub_action(input, output):
+    if output is None:
+        with pytest.raises(ValueError):
+            get_dub_action(input)
+    else:
+        assert output == get_dub_action(input)
+
+
+@pytest.mark.parametrize('input,output', (
+        ('upvote', Action.downvote),
+        ('updub', Action.downvote),
+        ('updubs', Action.downvote),
+        ('downvote', Action.upvote),
+        ('downdub', Action.upvote),
+        ('downdubs', Action.upvote),
+        ('none', None),
+))
+def test_get_opposite_dub_action(input, output):
+    if output is None:
+        with pytest.raises(ValueError):
+            get_opposite_dub_action(input)
+    else:
+        assert output == get_opposite_dub_action(input)
+
+
+@pytest.mark.parametrize('loops, output', (
+        (1, {Action.upvote, }),
+        (2, {Action.downvote, }),
+        (3, {Action.upvote, }),
+        pytest.param(4, {Action.upvote, Action.skip}, marks=pytest.mark.xfail(
+            reason='The query is not complete enough to only aggregate upvotes and downvotes')),
+))
+@pytest.mark.asyncio
+async def test_query_simplified_user_actions(
+        db_conn,
+        track_generator,
+        user_generator,
+        playback_generator,
+        user_action_generator,
+        loops,
+        output
+):
+    actions = ['upvote', 'downvote', 'upvote', 'skip']
+    track = await track_generator()
+    user = await user_generator()
+    playback = await playback_generator(user=user, track=track)
+    for _, action in zip(range(loops), actions):
+        await user_action_generator(user=user, playback=playback, action=action)
+
+    user_actions = await query_simplified_user_actions(playback_id=playback['id'], conn=db_conn)
+    result = {ua['action'] for ua in user_actions}
+    assert result == output

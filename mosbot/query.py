@@ -234,11 +234,8 @@ async def save_bot_data(key, value, *, conn=None):
         index_elements=[db.BotData.c.key],
         set_=entry
     )
-    async with ensure_connection(conn) as conn:
-        result = await (await conn.execute(query)).first()
-        if not result:
-            logger.error(f'Failed to save {key} value in database')
-        # TODO: Change return
+    res = await execute_and_first(query=query, conn=conn)
+    return res.get('value')
 
 
 async def load_bot_data(key, *, conn=None):
@@ -249,12 +246,8 @@ async def load_bot_data(key, *, conn=None):
     :return:
     """
     query = sa.select([db.BotData.c.value]).where(db.BotData.c.key == key)
-    async with ensure_connection(conn) as conn:
-        result = await (await conn.execute(query)).first()
-        if not result:
-            logger.info(f'Failed to load {key} value from database')
-            return None
-        return result.as_tuple()[0]
+    res = await execute_and_first(query=query, conn=conn)
+    return res.get('value')
 
 
 async def get_last_playback(*, conn=None) -> dict:
