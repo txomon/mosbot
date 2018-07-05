@@ -106,18 +106,16 @@ async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
     :return: None or the track
     """
     assert 'id' in track_dict or 'extid' in track_dict
-    sq = sa.select([Track])
+    query = sa.select([Track])
 
     if 'id' in track_dict:
-        sq = sq.where(Track.c.id == track_dict['id'])
+        query = query.where(Track.c.id == track_dict['id'])
     else:
-        sq = sq.where(Track.c.extid == track_dict['extid'])
+        query = query.where(Track.c.extid == track_dict['extid'])
         if 'origin' in track_dict:
-            sq = sq.where(Track.c.origin == track_dict['origin'])
+            query = query.where(Track.c.origin == track_dict['origin'])
 
-    async with ensure_connection(conn) as conn:
-        track = await (await conn.execute(sq)).first()
-        return dict(track) if track else track
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
@@ -152,18 +150,16 @@ async def get_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
     :param conn: A connection if any open
     :return: None if it doesn't exist, else the record
     """
-    sq = sa.select([Playback])
+    query = sa.select([Playback])
 
     if 'id' in playback_dict:
-        sq = sq.where(Playback.c.id == playback_dict['id'])
+        query = query.where(Playback.c.id == playback_dict['id'])
     elif 'start' in playback_dict:
-        sq = sq.where(Playback.c.start == playback_dict['start'])
+        query = query.where(Playback.c.start == playback_dict['start'])
     else:
         raise ValueError(f'Need either ID or start for getting a playback: {playback_dict}')
 
-    async with ensure_connection(conn) as conn:
-        playback = await (await conn.execute(sq)).first()
-        return dict(playback) if playback else playback
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def save_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
@@ -181,9 +177,7 @@ async def save_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
         index_elements=[Playback.c.start],
         set_=playback_dict
     )
-    async with ensure_connection(conn) as conn:
-        playback = await (await conn.execute(query)).first()
-        return dict(playback) if playback else playback
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def get_user_action(*, user_action_dict: dict, conn=None) -> Optional[dict]:
@@ -193,16 +187,14 @@ async def get_user_action(*, user_action_dict: dict, conn=None) -> Optional[dict
     :param conn: A connection if any open
     :return: None if it doesn't exist, else the record
     """
-    sq = sa.select([UserAction])
+    query = sa.select([UserAction])
 
     if 'id' in user_action_dict:
-        sq = sq.where(UserAction.c.id == user_action_dict['id'])
+        query = query.where(UserAction.c.id == user_action_dict['id'])
     else:
         raise ValueError(f'Need ID for getting a user action: {user_action_dict}')
 
-    async with ensure_connection(conn) as conn:
-        useraction = await (await conn.execute(sq)).first()
-        return dict(useraction) if useraction else useraction
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def save_user_action(*, user_action_dict: dict, conn=None) -> Optional[dict]:
@@ -215,27 +207,12 @@ async def save_user_action(*, user_action_dict: dict, conn=None) -> Optional[dic
     assert 'playback_id' in user_action_dict
     query = psa.insert(UserAction) \
         .values(user_action_dict) \
+        .returning(UserAction) \
         .on_conflict_do_update(
         index_elements=[UserAction.c.id],
         set_=user_action_dict
     )
-    async with ensure_connection(conn) as conn:
-        useraction = await (await conn.execute(query)).first()
-        return dict(useraction) if useraction else useraction
-
-
-async def delete_user_action(*, user_action_id, conn=None):
-    """Don't use this. It's not needed
-
-    :param user_action_id:
-    :param conn: A connection if any open
-    :return:
-    """
-    query = sa.delete(UserAction) \
-        .where(UserAction.c.id == user_action_id)
-    async with ensure_connection(conn) as conn:
-        deleted_rows = (await conn.execute(query)).rowcount
-        return deleted_rows
+    return await execute_and_first(query=query, conn=conn)
 
 
 async def save_bot_data(key, value, *, conn=None):
@@ -252,6 +229,7 @@ async def save_bot_data(key, value, *, conn=None):
     }
     query = psa.insert(db.BotData) \
         .values(entry) \
+        .returning(db.BotData) \
         .on_conflict_do_update(
         index_elements=[db.BotData.c.key],
         set_=entry

@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import itertools
 
+import asyncio_extras
 import datetime
 import pytest
 from aiopg import Connection
@@ -10,7 +11,7 @@ from alembic.command import downgrade, upgrade
 from alembic.config import Config
 
 from mosbot.db import get_engine
-from mosbot.query import save_user, save_track, save_playback
+from mosbot.query import save_user, save_track, save_playback, save_user_action
 
 config = Config('alembic.ini')
 
@@ -55,15 +56,8 @@ async def db_conn():
 
         trans: Connection = await roll_conn.begin()
 
-        # Restart all sequences to avoid id changes
-        sequences = await roll_conn.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S';")
-        sequences = (s[0] for s in await sequences.fetchall())
-
-        restart_sequences = ";".join(f'alter sequence {seq} restart' for seq in sequences)
-
-        await roll_conn.execute(restart_sequences)
-
-        yield roll_conn
+        async with reset_database(roll_conn):
+            yield roll_conn
 
         await trans.rollback()
         await roll_conn.close()
@@ -73,6 +67,28 @@ async def db_conn():
         await engine.wait_closed()
 
         mosbot.query.ensure_connection = old_ensure
+
+
+@asyncio_extras.async_contextmanager
+async def reset_database(conn):
+    """ Restart all sequences to avoid id changes.
+
+    Get the next value for all sequences and set it again with "is_called" setval parameter as false
+    to avoid increasing before nextval()
+
+    :param conn:
+    :return:
+    """
+    sequences = await conn.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S';")
+    sequences = (s[0] for s in await sequences.fetchall())
+    query = 'SELECT ' + ", ".join(f"nextval('{seq}') {seq}" for seq in sequences) + ';'
+    res = await conn.execute(query)
+    initial_values = dict(await res.fetchone())
+    restart_sequences = ";".join(f"select setval('{seq}', {value}, false)" for seq, value in initial_values.items())
+
+    await conn.execute(restart_sequences)
+    yield
+    await conn.execute(restart_sequences)
 
 
 def infinite_iterable():
@@ -90,11 +106,14 @@ def str_generator(name_format='{num}'):
         yield name_format.format(num=num)
 
 
-def datetime_generator(timedelta=None):
+def datetime_generator(
+        timedelta=None,
+        start=datetime.datetime(year=1, month=1, day=1),
+):
     if timedelta is None:
         timedelta = datetime.timedelta(seconds=1)
     for num in itertools.count():
-        yield datetime.datetime(year=1, month=1, day=1) + timedelta * num
+        yield start + timedelta * num
 
 
 @pytest.fixture
@@ -163,15 +182,15 @@ def playback_generator(db_conn):
     id_generator = int_generator()
     start_generator = datetime_generator(datetime.timedelta(seconds=120))
 
-    async def generate_playback(*, id=None, start=None, user_id, track_id):
+    async def generate_playback(*, id=None, start=None, user, track):
         if id is None:
             id = next(id_generator)
         if start is None:
             start = next(start_generator)
         playback_dict = {
             'id': id,
-            'track_id': track_id,
-            'user_id': user_id,
+            'track_id': track['id'],
+            'user_id': user['id'],
             'start': start,
         }
         playback_dict = await save_playback(playback_dict=playback_dict,
@@ -179,3 +198,42 @@ def playback_generator(db_conn):
         return playback_dict
 
     return generate_playback
+
+
+@pytest.fixture
+def user_action_generator(db_conn):
+    id_generator = int_generator()
+    action_generator = itertools.cycle(['skip', 'upvote', 'downvote'])
+
+    ts_generators = {}
+
+    async def generate_user_action(*, id=None, action=None, ts=None, playback, user):
+        if id is None:
+            id = next(id_generator)
+        if action is None:
+            action = next(action_generator)
+        if ts is None:
+            pb_id = playback['id']
+            ts_generator = ts_generators.get(pb_id)
+            if ts_generator is None:
+                ts_generator = datetime_generator(
+                    timedelta=datetime.timedelta(seconds=1),
+                    start=playback['start'],
+                )
+                ts_generators[pb_id] = ts_generator
+            ts = next(ts_generator)
+
+        user_action_dict = {
+            'id': id,
+            'action': action,
+            'ts': ts,
+            'playback_id': playback['id'],
+            'user_id': user['id'],
+        }
+        user_action_dict = await save_user_action(
+            user_action_dict=user_action_dict,
+            conn=db_conn
+        )
+        return user_action_dict
+
+    return generate_user_action
