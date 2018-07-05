@@ -260,9 +260,7 @@ async def get_last_playback(*, conn=None) -> dict:
     query = sa.select([db.Playback]) \
         .order_by(sa.desc(db.Playback.c.start)) \
         .limit(1)
-    async with ensure_connection(conn) as conn:
-        result = await (await conn.execute(query)).first()
-        return dict(result) if result else None
+    return await execute_and_first(query=query, conn=conn)
 
 
 # TODO: should be optional
