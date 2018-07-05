@@ -18,7 +18,7 @@ from mosbot.db import BotConfig
 from mosbot.handler import availability_handler, history_handler
 from mosbot.query import load_bot_data, save_bot_data
 from mosbot.usecase import save_history_songs
-from mosbot.utils import setup_logging, check_alembic_in_latest_version
+from mosbot.util import setup_logging, check_alembic_in_latest_version
 
 
 class BotConfigValueType(click.ParamType):

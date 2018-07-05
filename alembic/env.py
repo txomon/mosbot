@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, pool
 
 from mosbot import config as mosbot_config
 from mosbot.db import metadata
-from mosbot.utils import setup_logging
+from mosbot.util import setup_logging
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

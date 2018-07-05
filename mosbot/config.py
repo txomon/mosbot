@@ -16,24 +16,26 @@ def get_config(env_var: str, *args):
     :return:
     """
     # First file
-    value = None
+    value_holder = {}
     try:
         with open('config.json') as fd:
             file_config = json.load(fd)
         for k, v in file_config.items():
             if k.upper() == env_var:
-                value = v
+                value_holder['value'] = v
     except:
         pass
     # Second environment
     env_config = os.environ.get(env_var)
     if env_config is not None:
         try:
-            value = json.loads(env_config)
+            value_holder['value'] = json.loads(env_config)
         except:
-            value = env_config
+            value_holder['value'] = env_config
+    if value_holder:
+        return value_holder['value']
     if args:
-        return value if value else args[0]
+        return args[0]
     raise EnvironmentError(f'Configuration {env_var} variable is not set by file or environment')
 
 

@@ -16,7 +16,8 @@ from mosbot.query import save_user, save_track, save_playback, save_user_action
 config = Config('alembic.ini')
 
 
-@pytest.yield_fixture(scope='session', autouse=True)
+# This is module level to avoid collisions with alembic checks in code
+@pytest.yield_fixture(scope='module')
 def database():
     upgrade(config, 'head')
     yield
@@ -25,7 +26,7 @@ def database():
 
 @pytest.yield_fixture()
 @pytest.mark.asyncio
-async def db_conn():
+async def db_conn(database):
     """
     Global patch of ensure_connection, as when used with integration tests, we
     need to make sure there isn't any function calling the real one.
