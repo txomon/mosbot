@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.6.1
+      - image: mdillon/postgis:latest
     working_directory: ~/repo
 
     steps:
