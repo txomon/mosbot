@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+from json import JSONDecodeError
+
 """This file contains"""
 
 import asyncio
@@ -37,7 +39,7 @@ class BotConfigValueType(click.ParamType):
     def try_json(self, value):
         try:
             return True, json.loads(value)
-        except:
+        except JSONDecodeError:
             return False, None
 
     def try_number(self, value):
@@ -47,7 +49,7 @@ class BotConfigValueType(click.ParamType):
                 return True, integer
             else:
                 return True, floating
-        except:
+        except ValueError:
             return False, None
 
 

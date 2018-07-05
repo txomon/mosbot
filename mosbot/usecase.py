@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
-import asyncio
-import datetime
-import logging
 import time
 
 import aiopg.sa as asa
+import asyncio
+import datetime
+import logging
 import sqlalchemy as sa
-
 from abot.dubtrack import DubtrackDub, DubtrackEntity, DubtrackPlaying, DubtrackSkip, DubtrackWS
+
 from mosbot import db
 from mosbot.db import Action, BotConfig, Origin
 from mosbot.query import get_dub_action, get_last_playback, get_playback, get_track, get_user, load_bot_data, \
@@ -214,7 +214,7 @@ async def save_history_chunk(songs, conn: asa.SAConnection):
             if not track:
                 track = await save_track(track_dict=entry, conn=conn)
                 if not track:
-                    logger.error(f'Error Track#{track_id} {origin}#{fkid} by {song_played}')
+                    logger.error(f'Error Track#{track.get("id")} {origin}#{fkid} by {song_played}')
                     await trans.rollback()
                     raise ValueError(f'Error generating Track {origin}#{fkid} for {song_played}')
             track_id = track['id']
@@ -229,7 +229,9 @@ async def save_history_chunk(songs, conn: asa.SAConnection):
             if not playback:
                 playback = await save_playback(playback_dict=entry, conn=conn)
                 if not playback:
-                    logger.error(f'Error Playback#{playback_id} track:{track_id} user_id:{fkid} start:{song_played}')
+                    logger.error(f'Error Playback#{playback.get("id")} '
+                                 f'track:{track_id} user_id:{fkid} '
+                                 f'start:{song_played}')
                     await trans.rollback()
                     raise ValueError(f'Error generating Playback track:{track_id} user_id:{fkid} start:{song_played}')
             playback_id = playback['id']
@@ -270,7 +272,7 @@ async def save_history_chunk(songs, conn: asa.SAConnection):
             await trans.commit()
             logger.info(f'Saved songs up to {song_played}')
             break
-        except:
+        except Exception:
             await trans.rollback()
     else:
         logger.error(f'Failed to commit song-chunk: [{", ".join(songs)}]')

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+from json import JSONDecodeError
+
 """Configuration parameters for the bot, to be able to run them it's important to have them filled, it will raise an
 error if they are not defined"""
 
@@ -23,14 +25,14 @@ def get_config(env_var: str, *args):
         for k, v in file_config.items():
             if k.upper() == env_var:
                 value_holder['value'] = v
-    except:
+    except Exception:
         pass
     # Second environment
     env_config = os.environ.get(env_var)
     if env_config is not None:
         try:
             value_holder['value'] = json.loads(env_config)
-        except:
+        except JSONDecodeError:
             value_holder['value'] = env_config
     if value_holder:
         return value_holder['value']
