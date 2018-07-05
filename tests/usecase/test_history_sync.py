@@ -3,12 +3,12 @@ import pytest
 
 @pytest.fixture
 def mock_dubtrackws(mocker):
-    return mocker.patch('mosbot.usecase.DubtrackWS')
+    return mocker.patch('mosbot.usecase.history_sync.DubtrackWS')
 
 
 @pytest.fixture
 def mock_load_bot_data(mocker):
-    return mocker.patch('mosbot.usecase.load_bot_data')
+    return mocker.patch('mosbot.usecase.history_sync.load_bot_data')
 
 
 @pytest.mark.asyncio
