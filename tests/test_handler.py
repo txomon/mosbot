@@ -5,24 +5,21 @@ from abot.dubtrack import DubtrackPlaying, DubtrackSkip, DubtrackDub, DubtrackUs
 from mosbot.handler import history_handler, availability_handler
 
 
-@pytest.fixture
-def ensure_dubtrack_playing_mock(mocker):
+@pytest.yield_fixture
+def ensure_dubtrack_playing_mock():
     with am.patch('mosbot.handler.ensure_dubtrack_playing') as m:
-        m.return_value = am.CoroutineMock()()
         yield m
 
 
-@pytest.fixture
-def ensure_dubtrack_dub_mock(mocker):
+@pytest.yield_fixture
+def ensure_dubtrack_dub_mock():
     with am.patch('mosbot.handler.ensure_dubtrack_dub') as m:
-        m.return_value = am.CoroutineMock()()
         yield m
 
 
-@pytest.fixture
-def ensure_dubtrack_skip_mock(mocker):
+@pytest.yield_fixture
+def ensure_dubtrack_skip_mock():
     with am.patch('mosbot.handler.ensure_dubtrack_skip') as m:
-        m.return_value = am.CoroutineMock()()
         yield m
 
 

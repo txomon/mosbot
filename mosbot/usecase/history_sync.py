@@ -10,8 +10,7 @@ import logging
 import sqlalchemy as sa
 from abot.dubtrack import DubtrackWS
 
-from mosbot import db
-from mosbot.db import BotConfig
+from mosbot.db import BotConfig, UserAction, Action, Origin, get_engine
 from mosbot.query import get_dub_action, get_playback, get_track, get_user, load_bot_data, \
     query_simplified_user_actions, save_bot_data, save_playback, save_track, save_user, save_user_action
 
@@ -37,8 +36,9 @@ async def save_history_songs():
 
 
 async def persist_history(history_songs):
-    engine = await db.get_engine()
+    engine = await get_engine()
     songs = []
+    played = 0
     tasks = {}
     # Logic here: [ ][ ][s][s][ ][s][ ]
     # Groups:     \-/\-/\-------/\----/
@@ -50,6 +50,11 @@ async def persist_history(history_songs):
                 save_history_chunk(songs, await engine.acquire())
             )
             songs = []
+    if songs:
+        tasks[played] = asyncio.ensure_future(
+            save_history_chunk(songs, await engine.acquire())
+        )
+
     logger.debug('Waiting for data to be saved')
     await asyncio.wait(tasks.values())
     last_successful_song = None
@@ -58,9 +63,10 @@ async def persist_history(history_songs):
             logger.error(f'Saving task failed at {last_song}')
             break
         last_successful_song = last_song
-    if last_successful_song:
+    if last_successful_song is not None:
         logger.info(f'Successfully saved until {last_successful_song}')
         await save_bot_data(BotConfig.last_saved_history, last_successful_song)
+    return last_successful_song
 
 
 async def dubtrack_songs_since_ts(last_song):
@@ -261,7 +267,7 @@ async def get_or_create_playback(conn, song_played, track_id, user_id):
 
 
 async def get_or_create_track(conn, song):
-    origin = getattr(db.Origin, song['_song']['type'])
+    origin = getattr(Origin, song['_song']['type'])
     length = song['_song']['songLength']
     name = song['_song']['name']
     fkid = song['_song']['fkid']
@@ -276,7 +282,6 @@ async def get_or_create_track(conn, song):
         track = await save_track(track_dict=entry, conn=conn)
         if not track:
             logger.error(f'Error Track#{track.get("id")} {origin}#{fkid} by {song_played}')
-            await trans.rollback()
             raise ValueError(f'Error generating Track {origin}#{fkid} for {song_played}')
     return track
 
@@ -293,15 +298,15 @@ async def get_or_create_user(conn, song):
 
 
 async def history_import_skip_action(conn, previous_playback_id, song_played):
-    query = sa.select([db.UserAction.c.id]) \
-        .where(db.UserAction.c.action == db.Action.skip) \
-        .where(db.UserAction.c.playback_id == previous_playback_id)
+    query = sa.select([UserAction.c.id]) \
+        .where(UserAction.c.action == Action.skip) \
+        .where(UserAction.c.playback_id == previous_playback_id)
     user_action_id = await (await conn.execute(query)).first()
     if not user_action_id:
         user_action = await save_user_action(user_action_dict={
             'ts': song_played,
             'playback_id': previous_playback_id,
-            'action': db.Action.skip,
+            'action': Action.skip,
         }, conn=conn)
         user_action_id = user_action['id']
         if not user_action_id:
@@ -309,5 +314,3 @@ async def history_import_skip_action(conn, previous_playback_id, song_played):
                 f'Error UserAction<skip>#{user_action_id} {previous_playback_id}({song_played})')
             raise ValueError(
                 f'\tCollision UserAction<skip>#{user_action_id} {previous_playback_id}({song_played})')
-
-
