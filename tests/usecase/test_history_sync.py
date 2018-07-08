@@ -2,12 +2,14 @@ import asynctest as am
 import pytest
 
 from mosbot.usecase import save_history_songs
-from mosbot.usecase.history_sync import persist_history
+from mosbot.usecase.history_sync import persist_history, dubtrack_songs_since_ts
 
 
 @pytest.yield_fixture
 def dubtrackws_mock():
     with am.patch('mosbot.usecase.history_sync.DubtrackWS') as m:
+        m.return_value.initialize = am.CoroutineMock()
+        m.return_value.get_history = am.CoroutineMock()
         yield m
 
 
@@ -32,8 +34,7 @@ def persist_history_mock():
 @pytest.yield_fixture
 def get_engine_mock():
     with am.patch('mosbot.usecase.history_sync.get_engine') as m:
-        mmm = m.return_value.acquire = am.CoroutineMock()
-        print(mmm)
+        m.return_value.acquire = am.CoroutineMock()
         yield m
 
 
@@ -46,6 +47,12 @@ def save_history_chunk_mock():
 @pytest.yield_fixture
 def save_bot_data_mock():
     with am.patch('mosbot.usecase.history_sync.save_bot_data') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def insert_history_skip_action_mock():
+    with am.patch('mosbot.usecase.history_sync.insert_history_skip_action') as m:
         yield m
 
 
@@ -110,3 +117,46 @@ async def test_persist_history(
     assert result == expected_result
     if is_saved:
         save_bot_data_mock.assert_awaited_once_with('last_saved_history', expected_result)
+
+
+def get_history_song_gen(start, stop, step):
+    for s in range(start, stop, step):
+        yield {'played': s}
+
+
+def dubtrack_songs_since_ts_result_gen(start, stop, step):
+    for i in get_history_song_gen(start, stop, step):
+        yield i['played'] / 1000, i
+
+
+@pytest.mark.parametrize('last_song, expected_calls, expected_result', (
+        (7, 2, dict(dubtrack_songs_since_ts_result_gen(15, 5, -1))),
+        (11, 1, dict(dubtrack_songs_since_ts_result_gen(15, 10, -1))),
+        (10, 2, dict(dubtrack_songs_since_ts_result_gen(15, 5, -1))),
+))
+@pytest.mark.asyncio
+async def test_dubtrack_songs_since_ts(
+        dubtrackws_mock,
+        last_song,
+        expected_calls,
+        expected_result,
+):
+    get_history = dubtrackws_mock.return_value.get_history
+    get_history.side_effect = (
+        tuple(get_history_song_gen(15, 10, -1)),
+        tuple(get_history_song_gen(10, 5, -1)),
+        tuple(get_history_song_gen(5, 0, -1)),
+        tuple(get_history_song_gen(0, -1, -1)),
+    )
+
+    result = await dubtrack_songs_since_ts(last_song / 1000)
+
+    assert expected_result == result
+    assert expected_calls == get_history.await_count
+
+
+@pytest.mark.asyncio
+async def test_save_history_chunk(
+
+):
+    pass

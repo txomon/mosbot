@@ -243,9 +243,11 @@ async def update_user_actions(conn, playback_id, song, song_played):
             }, conn=conn)
             if not user_action:
                 logger.error(
-                    f'\tError UserAction<vote>#{user_action_id} {playback_id}({song_played})')
+                    f'\tError UserAction<vote>#{user_action.get("id")} {playback_id}('
+                    f'{song_played})')
                 raise ValueError(
-                    f'\tCollision UserAction<skip>#{user_action_id} {previous_playback_id}({song_played})')
+                    f'\tCollision UserAction<skip>#{user_action.get("id")}'
+                    f'{playback_id}({song_played})')
 
 
 async def get_or_create_playback(conn, song_played, track_id, user_id):
@@ -259,9 +261,9 @@ async def get_or_create_playback(conn, song_played, track_id, user_id):
         playback = await save_playback(playback_dict=entry, conn=conn)
         if not playback:
             logger.error(f'Error Playback#{playback.get("id")} '
-                         f'track:{track_id} user_id:{fkid} '
+                         f'track:{track_id} user_id:{user_id} '
                          f'start:{song_played}')
-            raise ValueError(f'Error generating Playback track:{track_id} user_id:{fkid} start:{song_played}')
+            raise ValueError(f'Error generating Playback track:{track_id} user_id:{user_id} start:{song_played}')
     playback_id = playback['id']
     return playback_id
 
@@ -281,8 +283,8 @@ async def get_or_create_track(conn, song):
     if not track:
         track = await save_track(track_dict=entry, conn=conn)
         if not track:
-            logger.error(f'Error Track#{track.get("id")} {origin}#{fkid} by {song_played}')
-            raise ValueError(f'Error generating Track {origin}#{fkid} for {song_played}')
+            logger.error(f'Error Track#{track.get("id")} {origin}#{fkid} by {name}')
+            raise ValueError(f'Error generating Track {origin}#{fkid} for {name}')
     return track
 
 
