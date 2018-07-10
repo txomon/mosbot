@@ -1,8 +1,13 @@
+import asyncio_extras
 import asynctest as am
+import datetime
 import pytest
+from unittest import mock
 
 from mosbot.usecase import save_history_songs
-from mosbot.usecase.history_sync import persist_history, dubtrack_songs_since_ts
+from mosbot.usecase.history_sync import persist_history, dubtrack_songs_since_ts, save_history_chunk
+
+save_history_chunk = save_history_chunk.__wrapped__
 
 
 @pytest.yield_fixture
@@ -51,8 +56,32 @@ def save_bot_data_mock():
 
 
 @pytest.yield_fixture
-def insert_history_skip_action_mock():
-    with am.patch('mosbot.usecase.history_sync.insert_history_skip_action') as m:
+def history_import_skip_action_mock():
+    with am.patch('mosbot.usecase.history_sync.history_import_skip_action') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_or_create_user_mock():
+    with am.patch('mosbot.usecase.history_sync.get_or_create_user') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_or_create_track_mock():
+    with am.patch('mosbot.usecase.history_sync.get_or_create_track') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_or_create_playback_mock():
+    with am.patch('mosbot.usecase.history_sync.get_or_create_playback') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def update_user_actions_mock():
+    with am.patch('mosbot.usecase.history_sync.update_user_actions') as m:
         yield m
 
 
@@ -155,8 +184,57 @@ async def test_dubtrack_songs_since_ts(
     assert expected_calls == get_history.await_count
 
 
+@pytest.mark.parametrize((
+        'input_songs',
+        'history_import_skip_action_calls',
+        'whole_flow_calls',
+), (
+        (({'played': 1},), [], 1),
+        (({'played': 1, 'skipped': True}, {'played': 2}), [
+            {'song_played': datetime.datetime.utcfromtimestamp(2 / 1000)},
+        ], 2),
+), ids=(
+        'one-song',
+        'one-skip-one-normal',
+))
 @pytest.mark.asyncio
 async def test_save_history_chunk(
-
+        history_import_skip_action_mock,
+        get_or_create_user_mock,
+        get_or_create_track_mock,
+        get_or_create_playback_mock,
+        update_user_actions_mock,
+        input_songs,
+        history_import_skip_action_calls,
+        whole_flow_calls,
 ):
-    pass
+    conn = mock.MagicMock()
+
+    @asyncio_extras.async_contextmanager
+    async def mock_manager(*a, **kw):
+        yield
+
+    conn.begin = mock_manager
+    conn.close = am.CoroutineMock()
+
+    await save_history_chunk(songs=input_songs, conn=conn)
+    if len(history_import_skip_action_calls):
+        last_call = history_import_skip_action_calls[-1]
+
+        history_import_skip_action_mock.assert_awaited_with(
+            **last_call,
+            previous_playback_id=get_or_create_playback_mock.return_value,
+            conn=conn
+        )
+        print('MOCK CALLS', history_import_skip_action_mock.await_args_list)
+
+        for call in history_import_skip_action_calls:
+            history_import_skip_action_mock.assert_any_await(
+                **call,
+                previous_playback_id=get_or_create_playback_mock.return_value,
+                conn=conn
+            )
+    assert get_or_create_user_mock.await_count == whole_flow_calls
+    assert get_or_create_track_mock.await_count == whole_flow_calls
+    assert get_or_create_playback_mock.await_count == whole_flow_calls
+    assert update_user_actions_mock.await_count == whole_flow_calls

@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import sys
+
 import logging.config
 import os
 import pprint
-import sys
 import traceback
-
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -58,3 +59,24 @@ def check_alembic_in_latest_version():
 
     if head != current_head:
         raise RuntimeError(f'Database is not upgraded to latest head {head} from {current_head}')
+
+
+def retries(*, tries=10, final_message):
+    def retry(func):
+        @wraps(func)
+        async def wrapper(*a, **kw):
+            for try_num in range(1, tries + 1):
+                try:
+                    return await func(*a, **kw)
+                except Exception:
+                    message = f'Call {try_num} to function {func} failed'
+                    if try_num == 1:
+                        logger.exception(message)
+                    elif try_num == tries:
+                        pass  # This finishes the loop
+                    else:
+                        logger.info(message)
+            else:
+                logger.exception(str.format(final_message, *a, **kw))
+        return wrapper
+    return retry

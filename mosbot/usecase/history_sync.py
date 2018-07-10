@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import itertools
 import time
 
 import aiopg.sa as asa
@@ -13,6 +14,7 @@ from abot.dubtrack import DubtrackWS
 from mosbot.db import BotConfig, UserAction, Action, Origin, get_engine
 from mosbot.query import get_dub_action, get_playback, get_track, get_user, load_bot_data, \
     query_simplified_user_actions, save_bot_data, save_playback, save_track, save_user, save_user_action
+from mosbot.util import retries
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +49,12 @@ async def persist_history(history_songs):
         songs.append(song)
         if not song['skipped']:
             tasks[played] = asyncio.ensure_future(
-                save_history_chunk(songs, await engine.acquire())
+                save_history_chunk(songs=songs, conn=await engine.acquire())
             )
             songs = []
     if songs:
         tasks[played] = asyncio.ensure_future(
-            save_history_chunk(songs, await engine.acquire())
+            save_history_chunk(songs=songs, conn=await engine.acquire())
         )
 
     logger.debug('Waiting for data to be saved')
@@ -76,7 +78,7 @@ async def dubtrack_songs_since_ts(last_song):
     found_last_song = False
     played = time.time()
     logger.info(f'Starting page retrieval until {last_song}')
-    for page in range(1, 1000):
+    for page in itertools.count(1):  # pragma: no branch
         logger.debug(f'Retrieving page {page}, {len(history_songs)} songs, looking for {last_song} now at {played}')
         if found_last_song:
             break  # We want to do whole pages just in case...
@@ -89,7 +91,8 @@ async def dubtrack_songs_since_ts(last_song):
     return history_songs
 
 
-async def save_history_chunk(songs, conn: asa.SAConnection):
+@retries(final_message='Failed to commit song-chunk: [{songs}]')
+async def save_history_chunk(*, songs, conn: asa.SAConnection):
     """In charge of saving a chunck of continuous songs"""
     # {'__v': 0,
     #  '_id': '583bf4a9d9abb248008a698a',
@@ -172,48 +175,44 @@ async def save_history_chunk(songs, conn: asa.SAConnection):
     #  'userid': '57595c7a16c34f3d00b5ea8d'
     #  }
     song_played = None
-    for retries in range(10):
-        previous_song, previous_playback_id = {}, None
-        async with conn.begin():
-            for song in songs:
-                # Generate Action skip for the previous Playback entry
-                song_played = datetime.datetime.utcfromtimestamp(song['played'] / 1000)
-                if previous_song.get('skipped'):
-                    await history_import_skip_action(
-                        previous_playback_id=previous_playback_id,
-                        song_played=song_played,
-                        conn=conn,
-                    )
-
-                # Query or create the User for the Playback entry
-                user = await get_or_create_user(song=song, conn=conn)
-                user_id = user['id']
-
-                # Query or create the Track entry for this Playback entry
-                track = await get_or_create_track(song=song, conn=conn)
-                track_id = track['id']
-
-                # Query or create the Playback entry
-                playback_id = await get_or_create_playback(
+    previous_song, previous_playback_id = {}, None
+    async with conn.begin():
+        for song in songs:
+            # Generate Action skip for the previous Playback entry
+            song_played = datetime.datetime.utcfromtimestamp(song['played'] / 1000)
+            if previous_song.get('skipped'):
+                await history_import_skip_action(
+                    previous_playback_id=previous_playback_id,
                     song_played=song_played,
-                    track_id=track_id,
-                    user_id=user_id,
-                    conn=conn
-                )
-
-                # Query or create the UserAction<upvote> UserAction<downvote> entries
-                await update_user_actions(
-                    song=song,
-                    song_played=song_played,
-                    playback_id=playback_id,
                     conn=conn,
                 )
 
-                previous_song, previous_playback_id = song, playback_id
-            logger.info(f'Saved songs up to {song_played}')
-            break
-    else:
-        logger.error(f'Failed to commit song-chunk: [{", ".join(songs)}]')
+            # Query or create the User for the Playback entry
+            user = await get_or_create_user(song=song, conn=conn)
+            user_id = user['id']
+
+            # Query or create the Track entry for this Playback entry
+            track = await get_or_create_track(song=song, conn=conn)
+            track_id = track['id']
+
+            # Query or create the Playback entry
+            playback_id = await get_or_create_playback(
+                song_played=song_played,
+                track_id=track_id,
+                user_id=user_id,
+                conn=conn
+            )
+
+            # Query or create the UserAction<upvote> UserAction<downvote> entries
+            await update_user_actions(
+                song=song,
+                song_played=song_played,
+                playback_id=playback_id,
+                conn=conn,
+            )
+
+            previous_song, previous_playback_id = song, playback_id
+        logger.info(f'Saved songs up to {song_played}')
     await conn.close()
 
 
