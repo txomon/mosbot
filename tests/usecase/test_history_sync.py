@@ -4,8 +4,10 @@ import datetime
 import pytest
 from unittest import mock
 
+from mosbot.db import Action
 from mosbot.usecase import save_history_songs
-from mosbot.usecase.history_sync import persist_history, dubtrack_songs_since_ts, save_history_chunk
+from mosbot.usecase.history_sync import persist_history, dubtrack_songs_since_ts, save_history_chunk, \
+    update_user_actions
 
 save_history_chunk = save_history_chunk.__wrapped__
 
@@ -82,6 +84,18 @@ def get_or_create_playback_mock():
 @pytest.yield_fixture
 def update_user_actions_mock():
     with am.patch('mosbot.usecase.history_sync.update_user_actions') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def query_simplified_user_actions_mock():
+    with am.patch('mosbot.usecase.history_sync.query_simplified_user_actions') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_user_action_mock():
+    with am.patch('mosbot.usecase.history_sync.save_user_action') as m:
         yield m
 
 
@@ -194,8 +208,8 @@ async def test_dubtrack_songs_since_ts(
             {'song_played': datetime.datetime.utcfromtimestamp(2 / 1000)},
         ], 2),
 ), ids=(
-        'one-song',
-        'one-skip-one-normal',
+        'one_song',
+        'one_skip_one_normal',
 ))
 @pytest.mark.asyncio
 async def test_save_history_chunk(
@@ -238,3 +252,58 @@ async def test_save_history_chunk(
     assert get_or_create_track_mock.await_count == whole_flow_calls
     assert get_or_create_playback_mock.await_count == whole_flow_calls
     assert update_user_actions_mock.await_count == whole_flow_calls
+
+
+@pytest.mark.parametrize('input_song,user_actions,expected_actions,save_user_action_returns,raises_exception', (
+        ({'updubs': 3, 'downdubs': 2}, (3, 2), (0, 0), True, False),
+        ({'updubs': 0, 'downdubs': 2}, (0, 2), (0, 0), True, False),
+        ({'updubs': 3, 'downdubs': 0}, (3, 0), (0, 0), True, False),
+        ({'updubs': 1, 'downdubs': 2}, (3, 2), (0, 0), True, False),
+        ({'updubs': 3, 'downdubs': 1}, (3, 2), (0, 0), True, False),
+        ({'updubs': 3, 'downdubs': 2}, (1, 2), (2, 0), True, False),
+        ({'updubs': 3, 'downdubs': 2}, (3, 0), (0, 2), True, False),
+        ({'updubs': 3, 'downdubs': 2}, (1, 0), (2, 2), True, False),
+        ({'updubs': 3, 'downdubs': 2}, (2, 2), (1, 0), {}, ValueError),
+), ids=(
+        'no_changes',
+        'no_updubs',
+        'no_downdubs',
+        'extra_updubs',
+        'extra_downdubs',
+        'missing_upvote',
+        'missing_downvote',
+        'missing_both',
+        'impossible_saving',
+))
+@pytest.mark.asyncio
+async def test_update_user_actions(
+        query_simplified_user_actions_mock,
+        save_user_action_mock,
+        input_song,
+        user_actions,
+        expected_actions,
+        save_user_action_returns,
+        raises_exception,
+):
+    upvotes, downvotes = user_actions
+
+    actions = [{'action': Action.upvote} for _ in range(upvotes)]
+    actions.extend([{'action': Action.downvote} for _ in range(downvotes)])
+    query_simplified_user_actions_mock.return_value = actions
+
+    conn = mock.Mock()
+
+    if raises_exception:
+        save_user_action_mock.return_value = save_user_action_returns
+        with pytest.raises(raises_exception):
+            await update_user_actions(conn=conn, playback_id=1, song=input_song, song_played=1)
+    else:
+        await update_user_actions(conn=conn, playback_id=1, song=input_song, song_played=1)
+
+    for action, action_num in zip([Action.upvote, Action.downvote], expected_actions):
+        save_user_action_mock.assert_has_awaits([
+            mock.call(user_action_dict={'ts': 1, 'playback_id': 1, 'action': action}, conn=conn)
+            for _ in range(action_num)
+        ])
+    if expected_actions == (0, 0):
+        assert 0 == save_user_action_mock.await_count
