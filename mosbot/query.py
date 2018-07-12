@@ -76,7 +76,7 @@ async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
     return await execute_and_first(query=sq, conn=conn)
 
 
-async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
+async def save_user(*, user_dict: dict, conn=None) -> dict:
     """
     Saves user, makes sure that you provide at least either username or dtid,
 
@@ -95,6 +95,17 @@ async def save_user(*, user_dict: dict, conn=None) -> Optional[dict]:
         set_=user_dict
     )
     return await execute_and_first(query=query, conn=conn)
+
+
+async def get_or_save_user(*, user_dict: dict, conn=None) -> dict:
+    user = await get_user(user_dict=user_dict, conn=conn)
+    if user:
+        return user
+    user = await save_user(user_dict=user_dict, conn=conn)
+    if user:
+        return user
+    logger.error(f'Failed to save user {user_dict}')
+    raise ValueError('Impossible to save the user')
 
 
 async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
@@ -141,6 +152,17 @@ async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
     return await execute_and_first(query=query, conn=conn)
 
 
+async def get_or_save_track(*, track_dict: dict, conn=None) -> dict:
+    track = await get_track(track_dict=track_dict, conn=conn)
+    if track:
+        return track
+    track = await save_track(track_dict=track_dict, conn=conn)
+    if track:
+        return track
+    logger.error(f'Failed to save track {track_dict}')
+    raise ValueError('Impossible to save the track')
+
+
 async def get_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
     """Retrieves a playback, given the id or the start time. Preferably id.
 
@@ -180,6 +202,17 @@ async def save_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
     return await execute_and_first(query=query, conn=conn)
 
 
+async def get_or_save_playback(*, playback_dict: dict, conn=None) -> dict:
+    playback = await get_playback(playback_dict=playback_dict, conn=conn)
+    if playback:
+        return playback
+    playback = await save_playback(playback_dict=playback_dict, conn=conn)
+    if playback:
+        return playback
+    logger.error(f'Failed to save playback {playback_dict}')
+    raise ValueError('Impossible to save the playback')
+
+
 async def get_user_action(*, user_action_dict: dict, conn=None) -> Optional[dict]:
     """Get an specific user action, not querying (like multiple entries), so you need to provide the id
 
@@ -213,6 +246,17 @@ async def save_user_action(*, user_action_dict: dict, conn=None) -> Optional[dic
         set_=user_action_dict
     )
     return await execute_and_first(query=query, conn=conn)
+
+
+async def get_or_save_user_action(*, user_action_dict: dict, conn=None) -> dict:
+    user_action = await get_user_action(user_action_dict=user_action_dict, conn=conn)
+    if user_action:
+        return user_action
+    user_action = await save_user_action(user_action_dict=user_action_dict, conn=conn)
+    if user_action:
+        return user_action
+    logger.error(f'Failed to save user_action {user_action_dict}')
+    raise ValueError('Impossible to save the user_action')
 
 
 async def save_bot_data(key, value, *, conn=None):

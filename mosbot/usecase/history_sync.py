@@ -12,9 +12,9 @@ import sqlalchemy as sa
 from abot.dubtrack import DubtrackWS
 
 from mosbot.db import BotConfig, UserAction, Action, Origin, get_engine
-from mosbot.query import get_dub_action, get_playback, get_track, get_user, load_bot_data, \
-    query_simplified_user_actions, save_bot_data, save_playback, save_track, save_user, save_user_action, \
-    execute_and_first
+from mosbot.query import get_dub_action, load_bot_data, \
+    query_simplified_user_actions, save_bot_data, save_user_action, \
+    execute_and_first, get_or_save_user, get_or_save_track, get_or_save_playback
 from mosbot.util import retries
 
 logger = logging.getLogger(__name__)
@@ -251,19 +251,12 @@ async def update_user_actions(conn, playback_id, song, song_played):
 
 
 async def get_or_create_playback(conn, song_played, track_id, user_id):
-    entry = {
+    playback_dict = {
         'track_id': track_id,
         'user_id': user_id,
         'start': song_played,
     }
-    playback = await get_playback(playback_dict=entry, conn=conn)
-    if not playback:
-        playback = await save_playback(playback_dict=entry, conn=conn)
-        if not playback:
-            logger.error(f'Error Playback#{playback.get("id")} '
-                         f'track:{track_id} user_id:{user_id} '
-                         f'start:{song_played}')
-            raise ValueError(f'Error generating Playback track:{track_id} user_id:{user_id} start:{song_played}')
+    playback = await get_or_save_playback(playback_dict=playback_dict, conn=conn)
     playback_id = playback['id']
     return playback_id
 
@@ -273,18 +266,13 @@ async def get_or_create_track(conn, song):
     length = song['_song']['songLength']
     name = song['_song']['name']
     fkid = song['_song']['fkid']
-    entry = {
+    track_dict = {
         'length': length / 1000,
         'name': name,
         'origin': origin,
         'extid': fkid,
     }
-    track = await get_track(track_dict=entry, conn=conn)
-    if not track:
-        track = await save_track(track_dict=entry, conn=conn)
-        if not track:
-            logger.error(f'Error Track#{track.get("id")} {origin}#{fkid} by {name}')
-            raise ValueError(f'Error generating Track {origin}#{fkid} for {name}')
+    track = await get_or_save_track(track_dict=track_dict, conn=conn)
     return track
 
 
@@ -293,11 +281,7 @@ async def get_or_create_user(conn, song):
         'dtid': song['userid'],
         'username': song['_user']['username'],
     }
-    user = await get_user(user_dict=user_dict, conn=conn)
-    if not user:
-        user = await save_user(user_dict=user_dict, conn=conn)
-        if not user:
-            raise ValueError('Impossible to create/save the user')
+    user = await get_or_save_user(user_dict=user_dict, conn=conn)
     return user
 
 
