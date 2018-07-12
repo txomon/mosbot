@@ -248,17 +248,6 @@ async def save_user_action(*, user_action_dict: dict, conn=None) -> Optional[dic
     return await execute_and_first(query=query, conn=conn)
 
 
-async def get_or_save_user_action(*, user_action_dict: dict, conn=None) -> dict:
-    user_action = await get_user_action(user_action_dict=user_action_dict, conn=conn)
-    if user_action:
-        return user_action
-    user_action = await save_user_action(user_action_dict=user_action_dict, conn=conn)
-    if user_action:
-        return user_action
-    logger.error(f'Failed to save user_action {user_action_dict}')
-    raise ValueError('Impossible to save the user_action')
-
-
 async def save_bot_data(key, value, *, conn=None):
     """Save some random data in the database. Accepts a json as value
 

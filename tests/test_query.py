@@ -1,14 +1,53 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import asynctest as am
 import datetime
 import pytest
 from sqlalchemy.dialects import postgresql as psa
+from unittest import mock
 
 from mosbot.db import Origin, User, Action
 from mosbot.query import get_user, save_user, save_track, execute_and_first, get_track, get_playback, save_playback, \
     get_user_action, save_user_action, save_bot_data, load_bot_data, get_last_playback, get_user_user_actions, \
-    get_user_dub_user_actions, get_dub_action, get_opposite_dub_action, query_simplified_user_actions
+    get_user_dub_user_actions, get_dub_action, get_opposite_dub_action, query_simplified_user_actions, \
+    get_or_save_track, get_or_save_user, get_or_save_playback
+
+
+@pytest.yield_fixture
+def get_user_mock():
+    with am.patch('mosbot.query.get_user') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_user_mock():
+    with am.patch('mosbot.query.save_user') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_track_mock():
+    with am.patch('mosbot.query.get_track') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_track_mock():
+    with am.patch('mosbot.query.save_track') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_playback_mock():
+    with am.patch('mosbot.query.get_playback') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_playback_mock():
+    with am.patch('mosbot.query.save_playback') as m:
+        yield m
 
 
 @pytest.mark.parametrize('data_dict,expected_result', (
@@ -101,6 +140,36 @@ async def test_save_user(db_conn, user_dict, raises_exception):
         await save_user(user_dict=user_dict, conn=db_conn)
 
 
+@pytest.mark.parametrize('get_user_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_user_returns', ({}, {'id': 2}))
+@pytest.mark.asyncio
+async def test_get_or_save_user(
+        get_user_mock,
+        save_user_mock,
+        get_user_returns,
+        save_user_returns,
+):
+    get_user_mock.return_value = get_user_returns
+    save_user_mock.return_value = save_user_returns
+    conn = mock.Mock()
+    user_dict = mock.Mock()
+    result = (get_user_returns or save_user_returns)
+
+    if not result:
+        with pytest.raises(ValueError):
+            await get_or_save_user(conn=conn, user_dict=user_dict)
+    else:
+        returns = await get_or_save_user(conn=conn, user_dict=user_dict)
+        assert returns == result
+
+    get_user_mock.assert_awaited_once_with(user_dict=user_dict, conn=conn)
+
+    if get_user_returns:
+        save_user_mock.assert_not_awaited()
+    else:
+        save_user_mock.assert_awaited_once_with(user_dict=user_dict, conn=conn)
+
+
 @pytest.mark.parametrize('track_dict, raises_exception', (
         ({'id': 1}, False),
         ({'extid': 'Extid 1'}, False),
@@ -139,6 +208,36 @@ async def test_save_track(db_conn, track_dict, raises_exception):
         expected_result = dict(id=1, **track_dict)
         expected_result['origin'] = Origin.youtube
         assert actual_result == expected_result
+
+
+@pytest.mark.parametrize('get_track_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_track_returns', ({}, {'id': 2}))
+@pytest.mark.asyncio
+async def test_get_or_save_track(
+        get_track_mock,
+        save_track_mock,
+        get_track_returns,
+        save_track_returns,
+):
+    get_track_mock.return_value = get_track_returns
+    save_track_mock.return_value = save_track_returns
+    conn = mock.Mock()
+    track_dict = mock.Mock()
+    result = (get_track_returns or save_track_returns)
+
+    if not result:
+        with pytest.raises(ValueError):
+            await get_or_save_track(conn=conn, track_dict=track_dict)
+    else:
+        returns = await get_or_save_track(conn=conn, track_dict=track_dict)
+        assert returns == result
+
+    get_track_mock.assert_awaited_once_with(track_dict=track_dict, conn=conn)
+
+    if get_track_returns:
+        save_track_mock.assert_not_awaited()
+    else:
+        save_track_mock.assert_awaited_once_with(track_dict=track_dict, conn=conn)
 
 
 @pytest.mark.parametrize('playback_dict, raises_exception', (
@@ -191,6 +290,36 @@ async def test_save_playback(
         actual_result = await save_playback(playback_dict=playback_dict, conn=db_conn)
         db_data = await get_playback(playback_dict={'id': 1}, conn=db_conn)
         assert db_data == actual_result
+
+
+@pytest.mark.parametrize('get_playback_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_playback_returns', ({}, {'id': 2}))
+@pytest.mark.asyncio
+async def test_get_or_save_playback(
+        get_playback_mock,
+        save_playback_mock,
+        get_playback_returns,
+        save_playback_returns,
+):
+    get_playback_mock.return_value = get_playback_returns
+    save_playback_mock.return_value = save_playback_returns
+    conn = mock.Mock()
+    playback_dict = mock.Mock()
+    result = (get_playback_returns or save_playback_returns)
+
+    if not result:
+        with pytest.raises(ValueError):
+            await get_or_save_playback(conn=conn, playback_dict=playback_dict)
+    else:
+        returns = await get_or_save_playback(conn=conn, playback_dict=playback_dict)
+        assert returns == result
+
+    get_playback_mock.assert_awaited_once_with(playback_dict=playback_dict, conn=conn)
+
+    if get_playback_returns:
+        save_playback_mock.assert_not_awaited()
+    else:
+        save_playback_mock.assert_awaited_once_with(playback_dict=playback_dict, conn=conn)
 
 
 @pytest.mark.parametrize('user_action_dict, raises_exception', (
