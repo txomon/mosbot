@@ -60,7 +60,7 @@ def check_alembic_in_latest_version():
         raise RuntimeError(f'Database is not upgraded to latest head {head} from {current_head}')
 
 
-def retries(*, tries=10, final_message):
+def retries(*, tries=10, final_message):  # pragma: no cover
     def retry(func):
         @wraps(func)
         async def wrapper(*a, **kw):
@@ -77,5 +77,7 @@ def retries(*, tries=10, final_message):
                         logger.info(message)
             else:
                 logger.exception(str.format(final_message, *a, **kw))
+
         return wrapper
+
     return retry
