@@ -4,10 +4,10 @@ import datetime
 import pytest
 from unittest import mock
 
-from mosbot.db import Action
+from mosbot.db import Action, Origin
 from mosbot.usecase import save_history_songs
 from mosbot.usecase.history_sync import persist_history, dubtrack_songs_since_ts, save_history_chunk, \
-    update_user_actions
+    update_user_actions, get_or_create_playback, get_or_create_track, get_or_create_user, history_import_skip_action
 
 save_history_chunk = save_history_chunk.__wrapped__
 
@@ -96,6 +96,48 @@ def query_simplified_user_actions_mock():
 @pytest.yield_fixture
 def save_user_action_mock():
     with am.patch('mosbot.usecase.history_sync.save_user_action') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_playback_mock():
+    with am.patch('mosbot.usecase.history_sync.get_playback') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_playback_mock():
+    with am.patch('mosbot.usecase.history_sync.save_playback') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_track_mock():
+    with am.patch('mosbot.usecase.history_sync.get_track') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_track_mock():
+    with am.patch('mosbot.usecase.history_sync.save_track') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def get_user_mock():
+    with am.patch('mosbot.usecase.history_sync.get_user') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def save_user_mock():
+    with am.patch('mosbot.usecase.history_sync.save_user') as m:
+        yield m
+
+
+@pytest.yield_fixture
+def execute_and_first_mock():
+    with am.patch('mosbot.usecase.history_sync.execute_and_first') as m:
         yield m
 
 
@@ -305,5 +347,114 @@ async def test_update_user_actions(
             mock.call(user_action_dict={'ts': 1, 'playback_id': 1, 'action': action}, conn=conn)
             for _ in range(action_num)
         ])
-    if expected_actions == (0, 0):
-        assert 0 == save_user_action_mock.await_count
+
+    assert sum(expected_actions) == save_user_action_mock.await_count
+
+
+@pytest.mark.parametrize('get_playback_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_playback_returns', ({}, {'id': 1}))
+@pytest.mark.asyncio
+async def test_get_or_create_playback(
+        get_playback_mock,
+        save_playback_mock,
+        get_playback_returns,
+        save_playback_returns,
+):
+    get_playback_mock.return_value = get_playback_returns
+    save_playback_mock.return_value = save_playback_returns
+    conn = mock.Mock()
+
+    if not (get_playback_returns or save_playback_returns):
+        with pytest.raises(ValueError):
+            await get_or_create_playback(conn=conn, song_played=1, track_id=1, user_id=1)
+    else:
+        returns = await get_or_create_playback(conn=conn, song_played=1, track_id=1, user_id=1)
+        assert returns == 1
+
+    playback_dict = {'track_id': 1, 'user_id': 1, 'start': 1}
+    get_playback_mock.assert_awaited_once_with(playback_dict=playback_dict, conn=conn)
+    if not get_playback_returns:
+        save_playback_mock.assert_awaited_once_with(playback_dict=playback_dict, conn=conn)
+
+
+@pytest.mark.parametrize('get_track_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_track_returns', ({}, {'id': 1}))
+@pytest.mark.asyncio
+async def test_get_or_create_track(
+        get_track_mock,
+        save_track_mock,
+        get_track_returns,
+        save_track_returns,
+):
+    get_track_mock.return_value = get_track_returns
+    save_track_mock.return_value = save_track_returns
+    conn = mock.Mock()
+
+    song = {'_song': {'type': 'youtube', 'songLength': 1000, 'name': 'Song 1', 'fkid': '123asd'}}
+    track_dict = {'length': 1, 'name': 'Song 1', 'origin': Origin.youtube, 'extid': '123asd', }
+
+    if not (get_track_returns or save_track_returns):
+        with pytest.raises(ValueError):
+            await get_or_create_track(conn=conn, song=song)
+    else:
+        returns = await get_or_create_track(conn=conn, song=song)
+        assert returns == {'id': 1}
+
+    get_track_mock.assert_awaited_once_with(track_dict=track_dict, conn=conn)
+    if not get_track_returns:
+        save_track_mock.assert_awaited_once_with(track_dict=track_dict, conn=conn)
+
+
+@pytest.mark.parametrize('get_user_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_user_returns', ({}, {'id': 1}))
+@pytest.mark.asyncio
+async def test_get_or_create_user(
+        get_user_mock,
+        save_user_mock,
+        get_user_returns,
+        save_user_returns,
+):
+    get_user_mock.return_value = get_user_returns
+    save_user_mock.return_value = save_user_returns
+    conn = mock.Mock()
+
+    song = {'userid': 'DubtrackId 1', '_user': {'username': 'Dubtrack Username 1'}}
+    user_dict = {'dtid': 'DubtrackId 1', 'username': 'Dubtrack Username 1'}
+
+    if not (get_user_returns or save_user_returns):
+        with pytest.raises(ValueError):
+            await get_or_create_user(conn=conn, song=song)
+    else:
+        returns = await get_or_create_user(conn=conn, song=song)
+        assert returns == {'id': 1}
+
+    get_user_mock.assert_awaited_once_with(user_dict=user_dict, conn=conn)
+    if not get_user_returns:
+        save_user_mock.assert_awaited_once_with(user_dict=user_dict, conn=conn)
+
+
+@pytest.mark.parametrize('execute_and_first_returns', ({}, {'id': 1}))
+@pytest.mark.parametrize('save_user_action_returns', ({}, {'id': 1}))
+@pytest.mark.asyncio
+async def test_history_import_skip_action(
+        execute_and_first_mock,
+        save_user_action_mock,
+        execute_and_first_returns,
+        save_user_action_returns,
+):
+    execute_and_first_mock.return_value = execute_and_first_returns
+    save_user_action_mock.return_value = save_user_action_returns
+    conn = mock.Mock()
+
+    user_action_dict = {'ts': 1, 'playback_id': 1, 'action': Action.skip, }
+
+    if not (execute_and_first_returns or save_user_action_returns):
+        with pytest.raises(ValueError):
+            await history_import_skip_action(conn=conn, previous_playback_id=1, song_played=1)
+    else:
+        returns = await history_import_skip_action(conn=conn, previous_playback_id=1, song_played=1)
+        assert returns is None
+
+    execute_and_first_mock.assert_awaited_once()
+    if not execute_and_first_returns:
+        save_user_action_mock.assert_awaited_once_with(user_action_dict=user_action_dict, conn=conn)

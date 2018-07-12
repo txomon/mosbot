@@ -13,7 +13,8 @@ from abot.dubtrack import DubtrackWS
 
 from mosbot.db import BotConfig, UserAction, Action, Origin, get_engine
 from mosbot.query import get_dub_action, get_playback, get_track, get_user, load_bot_data, \
-    query_simplified_user_actions, save_bot_data, save_playback, save_track, save_user, save_user_action
+    query_simplified_user_actions, save_bot_data, save_playback, save_track, save_user, save_user_action, \
+    execute_and_first
 from mosbot.util import retries
 
 logger = logging.getLogger(__name__)
@@ -288,11 +289,13 @@ async def get_or_create_track(conn, song):
 
 
 async def get_or_create_user(conn, song):
-    dtid = song['userid']
-    username = song['_user']['username']
-    user = await get_user(user_dict={'dtid': dtid}, conn=conn)
+    user_dict = {
+        'dtid': song['userid'],
+        'username': song['_user']['username'],
+    }
+    user = await get_user(user_dict=user_dict, conn=conn)
     if not user:
-        user = await save_user(user_dict={'dtid': dtid, 'username': username}, conn=conn)
+        user = await save_user(user_dict=user_dict, conn=conn)
         if not user:
             raise ValueError('Impossible to create/save the user')
     return user
@@ -302,16 +305,15 @@ async def history_import_skip_action(conn, previous_playback_id, song_played):
     query = sa.select([UserAction.c.id]) \
         .where(UserAction.c.action == Action.skip) \
         .where(UserAction.c.playback_id == previous_playback_id)
-    user_action_id = await (await conn.execute(query)).first()
-    if not user_action_id:
+    user_action = await execute_and_first(query=query, conn=conn)
+    if not user_action:
         user_action = await save_user_action(user_action_dict={
             'ts': song_played,
             'playback_id': previous_playback_id,
             'action': Action.skip,
         }, conn=conn)
-        user_action_id = user_action['id']
-        if not user_action_id:
+        if not user_action:
             logger.error(
-                f'Error UserAction<skip>#{user_action_id} {previous_playback_id}({song_played})')
+                f'Error UserAction<skip> {previous_playback_id}({song_played})')
             raise ValueError(
-                f'\tCollision UserAction<skip>#{user_action_id} {previous_playback_id}({song_played})')
+                f'\tCollision UserAction<skip> {previous_playback_id}({song_played})')
