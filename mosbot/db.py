@@ -2,7 +2,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import asyncio
-
 import weakref
 
 """db is the entities of all the application, there is no business logic (like actions on the entities), but just
@@ -150,3 +149,6 @@ last time we fetched history data.
 class BotConfig:
     """This are the keys used in :ref:`BotData`"""
     last_saved_history = 'last_saved_history'  #: Last timestamp history was gathered
+
+
+BotConfig.configs = tuple(v for v in vars(BotConfig) if not v.startswith('__'))

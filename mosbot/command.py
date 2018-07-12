@@ -3,6 +3,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from json import JSONDecodeError
 
+from mosbot.db import BotConfig
+
 """This file contains"""
 
 import asyncio
@@ -16,7 +18,6 @@ import abot.cli as cli
 import abot.dubtrack as dt
 from abot.bot import Bot
 from mosbot import config as mos_config
-from mosbot.db import BotConfig
 from mosbot.handler import availability_handler, history_handler
 from mosbot.query import load_bot_data, save_bot_data
 from mosbot.usecase import save_history_songs
@@ -31,9 +32,6 @@ class BotConfigValueType(click.ParamType):
         success, converted = self.try_json(value)
         if success:
             return converted
-        success, converted = self.try_number(value)
-        if success:
-            return converted
         return value
 
     def try_json(self, value):
@@ -42,21 +40,11 @@ class BotConfigValueType(click.ParamType):
         except JSONDecodeError:
             return False, None
 
-    def try_number(self, value):
-        try:
-            integer, floating = int(value), float(value)
-            if floating == integer:
-                return True, integer
-            else:
-                return True, floating
-        except ValueError:
-            return False, None
-
 
 @cli.group(invoke_without_command=True)
 async def botcmd():
     """Group in which the commands available only through the bot are"""
-    print('botcmd')
+    pass  # pragma: no cover
 
 
 @botcmd.command()
@@ -76,7 +64,7 @@ async def history_sync(debug):
 
 @botcmd.command()
 @click.option('--value', '-v', type=BotConfigValueType())
-@click.argument('key', type=click.Choice(v for v in vars(BotConfig) if not v.startswith('__')))
+@click.argument('key', type=click.Choice(BotConfig.configs))
 async def config(key, value):
     """Set new value for key in the database (used to override internals, needs to be controlled, as someone could
     really break something here"""
@@ -91,7 +79,7 @@ async def config(key, value):
 @click.group(invoke_without_command=True)
 def botcli():
     """Group of commands that can only be executed from the command line"""
-    click.echo('BOTCLI')
+    pass  # pragma: no cover
 
 
 @botcli.command()
