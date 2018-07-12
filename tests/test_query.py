@@ -11,7 +11,7 @@ from mosbot.db import Origin, User, Action
 from mosbot.query import get_user, save_user, save_track, execute_and_first, get_track, get_playback, save_playback, \
     get_user_action, save_user_action, save_bot_data, load_bot_data, get_last_playback, get_user_user_actions, \
     get_user_dub_user_actions, get_dub_action, get_opposite_dub_action, query_simplified_user_actions, \
-    get_or_save_track, get_or_save_user, get_or_save_playback
+    get_or_save_track, get_or_save_user, get_or_save_playback, ensure_connection
 
 
 @pytest.yield_fixture
@@ -48,6 +48,38 @@ def get_playback_mock():
 def save_playback_mock():
     with am.patch('mosbot.query.save_playback') as m:
         yield m
+
+
+@pytest.yield_fixture
+def get_engine_mock():
+    with am.patch('mosbot.query.get_engine') as m:
+        get_engine = m.return_value = am.CoroutineMock()
+        engine_object = get_engine.acquire = am.CoroutineMock()
+        engine_object.return_value.close = am.CoroutineMock()
+        yield m
+
+
+@pytest.mark.parametrize('connection', (True, False))
+@pytest.mark.asyncio
+async def test_ensure_connection(
+        get_engine_mock,
+        connection,
+):
+    engine_object = get_engine_mock.return_value
+    connection_object = engine_object.acquire.return_value
+    async with ensure_connection(conn=connection) as conn:
+        if connection:
+            assert conn is True
+        else:
+            assert connection_object == conn
+    if not connection:
+        get_engine_mock.assert_awaited_once_with()
+        engine_object.acquire.assert_awaited_once_with()
+        connection_object.close.assert_awaited_once_with()
+    else:
+        get_engine_mock.assert_not_awaited()
+        engine_object.acquire.assert_not_awaited()
+        connection_object.close.assert_not_awaited()
 
 
 @pytest.mark.parametrize('data_dict,expected_result', (
@@ -111,7 +143,7 @@ async def test_get_user(db_conn, user_generator, user_dict, raises_exception):
 
 
 @pytest.mark.parametrize('user_dict, raises_exception', (
-        ({}, False),  # TODO
+        ({}, False),
 ))
 @pytest.mark.asyncio
 async def test_save_user(db_conn, user_dict, raises_exception):
@@ -464,13 +496,15 @@ async def test_user_dub_user_actions(
         playback = await playback_generator(user=user, track=track)
         for _ in range(6):
             user_action = await user_action_generator(user=user, playback=playback)
-            if user_action['action'] not in ['upvote', 'downvote']:
+            if user_action['action'] not in [Action.upvote, Action.downvote]:
                 continue
             expected_user_actions.add(tuple(sorted(user_action.items())))
 
     user_actions = await get_user_dub_user_actions(user_id=user['id'], conn=db_conn)
+    assert user_actions
     user_actions = {tuple(sorted(ua.items())) for ua in user_actions}
 
+    assert expected_user_actions
     assert user_actions == expected_user_actions
 
 

@@ -25,7 +25,7 @@ class utcnow(functions.FunctionElement):  # noqa
 
 
 @compiles(utcnow, 'postgresql')
-def _pg_utcnow(element, compiler, **kwargs):
+def _pg_utcnow(element, compiler, **kwargs):  # pragma: no cover
     return "(statement_timestamp() AT TIME ZONE 'utc')::TIMESTAMP WITH TIME ZONE"
 
 

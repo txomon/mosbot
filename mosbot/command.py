@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+from abot.dubtrack import DubtrackBotBackend
 from json import JSONDecodeError
 
 from mosbot.db import BotConfig
@@ -15,7 +16,6 @@ import typing
 import click
 
 import abot.cli as cli
-import abot.dubtrack as dt
 from abot.bot import Bot
 from mosbot import config as mos_config
 from mosbot.handler import availability_handler, history_handler
@@ -97,7 +97,7 @@ def run(debug):
     setup_logging(debug)
     # Setup
     bot = Bot()
-    dubtrack_backend = dt.DubtrackBotBackend()
+    dubtrack_backend = DubtrackBotBackend()
     dubtrack_backend.configure(username=mos_config.DUBTRACK_USERNAME, password=mos_config.DUBTRACK_PASSWORD)
     bot.attach_backend(backend=dubtrack_backend)
     # bot.attach_command_group(botcmd) #: Disabled until permissions are implemented

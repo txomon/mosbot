@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 async def history_handler(event: Union[DubtrackSkip, DubtrackPlaying, DubtrackDub]):
     """It makes sure to record in the database all the data we are currently keeping records of"""
-    # FIXME: Query is used here for tests, refactor into decorator
     async with query.ensure_connection(None) as conn:
         if isinstance(event, DubtrackPlaying):
             await ensure_dubtrack_playing(event=event, conn=conn)

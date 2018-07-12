@@ -235,6 +235,7 @@ def user_action_generator(db_conn):
             user_action_dict=user_action_dict,
             conn=db_conn
         )
+        assert user_action_dict
         return user_action_dict
 
     return generate_user_action

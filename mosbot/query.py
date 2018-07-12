@@ -44,8 +44,6 @@ async def ensure_connection(conn):
 async def execute_and_first(*, query, conn=None):
     async with ensure_connection(conn) as conn:
         result_proxy = await conn.execute(query)
-        if result_proxy.closed:
-            raise ValueError('ResultProxy closed!?')  # TODO: DEBUG this
         data = await result_proxy.first()
         if not data:
             return {}
@@ -323,7 +321,7 @@ async def get_user_dub_user_actions(user_id, *, conn=None) -> List[dict]:
     """
     query = sa.select([db.UserAction]) \
         .where(UserAction.c.user_id == user_id) \
-        .where(UserAction.c.action in [Action.upvote, Action.downvote])
+        .where(UserAction.c.action.in_([Action.upvote, Action.downvote]))
     async with ensure_connection(conn) as conn:
         result = []
         async for user_action in await conn.execute(query):

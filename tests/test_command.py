@@ -1,9 +1,12 @@
 import asynctest as am
 import pytest
 from click.testing import CliRunner
+from unittest import mock
 
+from mosbot import config
 from mosbot.__main__ import main
 from mosbot.command import BotConfigValueType
+from mosbot.handler import history_handler, availability_handler
 
 
 @pytest.fixture
@@ -32,6 +35,21 @@ def save_bot_data_mock():
 def load_bot_data_mock():
     with am.patch('mosbot.command.load_bot_data') as m:
         yield m
+
+
+@pytest.fixture
+def bot_mock(mocker):
+    return mocker.patch('mosbot.command.Bot')
+
+
+@pytest.fixture
+def dubtrackbotbackend_mock(mocker):
+    return mocker.patch('mosbot.command.DubtrackBotBackend')
+
+
+@pytest.fixture
+def asyncio_mock(mocker):
+    return mocker.patch('mosbot.command.asyncio')
 
 
 @pytest.mark.parametrize('input,expected_output', (
@@ -129,5 +147,53 @@ def test_test(
     assert result.exit_code == 0
 
 
-def test_run():
-    pass
+@pytest.mark.parametrize('debug_arg,debug', (
+        ('', False),
+        ('-d', True),
+        ('--no-debug', False),
+        ('--debug', True),
+))
+def test_run(
+        event_loop,
+        check_alembic_in_latest_version_mock,
+        setup_logging_mock,
+        bot_mock,
+        dubtrackbotbackend_mock,
+        asyncio_mock,
+        debug_arg,
+        debug,
+):
+    runner = CliRunner()
+    args = ['run']
+    if debug_arg:
+        args.append(debug_arg)
+
+    result = runner.invoke(main, args)
+
+    assert result.exit_code == 0
+
+    check_alembic_in_latest_version_mock.assert_called_once_with()
+    setup_logging_mock.assert_called_once_with(debug)
+
+    bot_mock.assert_called_once_with()
+    bot_object = bot_mock.return_value
+
+    dubtrackbotbackend_mock.assert_called_once_with()
+    dubtrack_backend_object = dubtrackbotbackend_mock.return_value
+    dubtrack_backend_object.configure.assert_called_once_with(
+        username=config.DUBTRACK_USERNAME,
+        password=config.DUBTRACK_PASSWORD,
+    )
+    bot_object.attach_backend.assert_called_once_with(
+        backend=dubtrack_backend_object
+    )
+    assert bot_object.add_event_handler.mock_calls == [
+        mock.call(func=history_handler),
+        mock.call(func=availability_handler),
+    ]
+
+    asyncio_mock.get_event_loop.assert_called_once_with()
+    loop_object = asyncio_mock.get_event_loop.return_value
+    loop_object.run_until_complete.assert_called_once_with(
+        bot_object.run_forever.return_value
+    )
