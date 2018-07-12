@@ -294,7 +294,6 @@ async def get_last_playback(*, conn=None) -> dict:
     return await execute_and_first(query=query, conn=conn)
 
 
-# TODO: should be optional
 async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:
     """Get the user actions for a given user, no more filters than that
 
@@ -311,7 +310,6 @@ async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:
         return result
 
 
-# TODO: should be optional
 async def get_user_dub_user_actions(user_id, *, conn=None) -> List[dict]:
     """Get the user dubs (upvote/downvote) only, not specific to a given playback
 
