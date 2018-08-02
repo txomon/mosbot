@@ -178,7 +178,7 @@ def test_run(
     bot_mock.assert_called_once_with()
     bot_object = bot_mock.return_value
 
-    dubtrackbotbackend_mock.assert_called_once_with()
+    dubtrackbotbackend_mock.assert_called_once_with(room='master-of-soundtrack')
     dubtrack_backend_object = dubtrackbotbackend_mock.return_value
     dubtrack_backend_object.configure.assert_called_once_with(
         username=config.DUBTRACK_USERNAME,
