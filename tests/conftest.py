@@ -27,12 +27,12 @@ def database():
 @pytest.yield_fixture()
 @pytest.mark.asyncio
 async def db_conn(database):
-    """
-    Global patch of ensure_connection, as when used with integration tests, we
-    need to make sure there isn't any function calling the real one.
+    """Global patch of ensure_connection.
+
+    When used with integration tests, we need to make sure there isn't any function calling the real one.
 
     Parallelization should run on processes, not threads, as this is a global
-    replace
+    replace.
 
     :return: connection to do the stuff on
     """
@@ -72,7 +72,7 @@ async def db_conn(database):
 
 @asyncio_extras.async_contextmanager
 async def reset_database(conn):
-    """ Restart all sequences to avoid id changes.
+    """Restart all sequences to avoid id changes.
 
     Get the next value for all sequences and set it again with "is_called" setval parameter as false
     to avoid increasing before nextval()

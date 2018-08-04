@@ -27,7 +27,8 @@ async def save_history_songs():
 
     It makes parallel queries and everything to maximise throughput.
 
-    Saves previous to first unsuccessful storage, or last successful. This is, it doesn't save 5 if 4 failed."""
+    Saves previous to first unsuccessful storage, or last successful. This is, it doesn't save 5 if 4 failed.
+    """
     last_song = await load_bot_data(BotConfig.last_saved_history)
     if not last_song:
         logger.error('There is no bot data regarding last saved playback')
@@ -38,7 +39,7 @@ async def save_history_songs():
     await persist_history(history_songs)
 
 
-async def persist_history(history_songs):
+async def persist_history(history_songs):  # noqa: D103
     engine = await get_engine()
     songs = []
     played = 0
@@ -72,7 +73,7 @@ async def persist_history(history_songs):
     return last_successful_song
 
 
-async def dubtrack_songs_since_ts(last_song):
+async def dubtrack_songs_since_ts(last_song):  # noqa: D103
     dws = DubtrackWS()
     await dws.initialize()
     history_songs = {}
@@ -94,7 +95,7 @@ async def dubtrack_songs_since_ts(last_song):
 
 @retries(final_message='Failed to commit song-chunk: [{songs}]')
 async def save_history_chunk(*, songs, conn: asa.SAConnection):
-    """In charge of saving a chunck of continuous songs"""
+    """In charge of saving a chunck of continuous songs."""
     # {'__v': 0,
     #  '_id': '583bf4a9d9abb248008a698a',
     #  '_song': {
@@ -217,7 +218,7 @@ async def save_history_chunk(*, songs, conn: asa.SAConnection):
     await conn.close()
 
 
-async def update_user_actions(conn, playback_id, song, song_played):
+async def update_user_actions(conn, playback_id, song, song_played):  # noqa D103  TODO
     user_actions = await query_simplified_user_actions(playback_id, conn=conn)
     for dubkey in ('updubs', 'downdubs'):
         # if no updubs/downdubs
@@ -250,7 +251,7 @@ async def update_user_actions(conn, playback_id, song, song_played):
                     f'{playback_id}({song_played})')
 
 
-async def get_or_create_playback(conn, song_played, track_id, user_id):
+async def get_or_create_playback(conn, song_played, track_id, user_id):  # noqa D103  TODO
     playback_dict = {
         'track_id': track_id,
         'user_id': user_id,
@@ -261,7 +262,7 @@ async def get_or_create_playback(conn, song_played, track_id, user_id):
     return playback_id
 
 
-async def get_or_create_track(conn, song):
+async def get_or_create_track(conn, song):  # noqa D103
     origin = getattr(Origin, song['_song']['type'])
     length = song['_song']['songLength']
     name = song['_song']['name']
@@ -276,7 +277,7 @@ async def get_or_create_track(conn, song):
     return track
 
 
-async def get_or_create_user(conn, song):
+async def get_or_create_user(conn, song):  # noqa D103  TODO
     user_dict = {
         'dtid': song['userid'],
         'username': song['_user']['username'],
@@ -285,7 +286,7 @@ async def get_or_create_user(conn, song):
     return user
 
 
-async def history_import_skip_action(conn, previous_playback_id, song_played):
+async def history_import_skip_action(conn, previous_playback_id, song_played):  # noqa D103  TODO
     query = sa.select([UserAction.c.id]) \
         .where(UserAction.c.action == Action.skip) \
         .where(UserAction.c.playback_id == previous_playback_id)

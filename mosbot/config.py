@@ -11,7 +11,7 @@ import os
 
 
 def get_config(env_var: str, *args):
-    """Get config parameter from file or environment var
+    """Get config parameter from file or environment var.
 
     :param str env_var: Environment var name, json key is derived from this
     :param args: This is a default value, if not defined, it will fail

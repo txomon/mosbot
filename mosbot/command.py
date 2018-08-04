@@ -25,16 +25,17 @@ from mosbot.util import setup_logging, check_alembic_in_latest_version
 
 
 class BotConfigValueType(click.ParamType):
-    """This is a custom type created to receive BotConfig parameters and validate them"""
+    """This is a custom type created to receive BotConfig parameters and validate them."""
+
     name = 'json'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # noqa D103  TODO
         success, converted = self.try_json(value)
         if success:
             return converted
         return value
 
-    def try_json(self, value):
+    def try_json(self, value):  # noqa D103  TODO
         try:
             return True, json.loads(value)
         except JSONDecodeError:
@@ -43,12 +44,12 @@ class BotConfigValueType(click.ParamType):
 
 @cli.group(invoke_without_command=True)
 async def botcmd():
-    """Group in which the commands available only through the bot are"""
+    """Group in which the commands available only through the bot are."""
     pass  # pragma: no cover
 
 
 @botcmd.command()
-async def atest():
+async def atest():  # noqa D103
     """Test (ping/pong) like to check if it works"""
     event: MessageEvent = current_event.get()
     await event.reply('atest')
@@ -69,8 +70,10 @@ async def history_sync(debug):
 @click.option('--value', '-v', type=BotConfigValueType())
 @click.argument('key', type=click.Choice(BotConfig.configs))
 async def config(key, value):
-    """Set new value for key in the database (used to override internals, needs to be controlled, as someone could
-    really break something here"""
+    """Set new value for key in the database.
+
+    This function is used to override internals, needs to be controlled, as someone could really break something here.
+    """
     event: MessageEvent = current_event.get()
     if value:
         await save_bot_data(key, value)
@@ -82,13 +85,13 @@ async def config(key, value):
 
 @click.group(invoke_without_command=True)
 def botcli():
-    """Group of commands that can only be executed from the command line"""
+    """Group of commands that can only be executed from the command line."""
     pass  # pragma: no cover
 
 
 @botcli.command()
 def test():
-    """Test command to see if it works"""
+    """Test command to see if it works."""
     click.echo('TEST')
     pprint.pprint(typing.get_type_hints(history_handler))
 
@@ -97,7 +100,7 @@ def test():
 @click.option('--debug/--no-debug', '-d/ ', default=False)
 @click.option('--room', '-r', nargs=1, default='master-of-soundtrack')
 def run(debug, room):
-    """Run the bot, this is the main command that is usually run in the server"""
+    """Run the bot, this is the main command that is usually run in the server."""
     check_alembic_in_latest_version()
     setup_logging(debug)
     # Setup
