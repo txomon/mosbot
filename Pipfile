@@ -28,6 +28,8 @@ pytest-pycharm = "*"
 pytest-xdist = "*"
 tox = "*"
 coveralls = "*"
+"flake8-docstrings" = "*"
+"flake8-per-file-ignores" = "*"
 
 [requires]
 python_version = "3.7"

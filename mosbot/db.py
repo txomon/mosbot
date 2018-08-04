@@ -32,7 +32,7 @@ def _pg_utcnow(element, compiler, **kwargs):  # pragma: no cover
 ENGINE = weakref.WeakKeyDictionary()
 
 
-async def get_engine(debug=False):
+async def get_engine(debug=False):  # noqa D103  TODO
     global ENGINE
     loop = asyncio.get_event_loop()
     if loop in ENGINE:
@@ -60,8 +60,8 @@ User = sa.Table('user', metadata,
 
 
 class Origin(enum.Enum):
-    """Dubtrack currently supports two backend, youtube and soundcloud
-    """
+    """Dubtrack currently supports two backend, youtube and soundcloud."""
+
     youtube = 1
     soundcloud = 2
 
@@ -105,8 +105,11 @@ Playback = sa.Table('playback', metadata,
 
 
 class Action(enum.Enum):
-    """Action is the kind of actions the user can do. It will be probably be changed to a table in the future
+    """Action is the kind of actions the user can do.
+
+    It will be probably be changed to a table in the future.
     """
+
     skip = 1
     upvote = 2
     downvote = 3
@@ -147,7 +150,8 @@ last time we fetched history data.
 
 
 class BotConfig:
-    """This are the keys used in :ref:`BotData`"""
+    """This are the keys used in :ref:`BotData`."""
+
     last_saved_history = 'last_saved_history'  #: Last timestamp history was gathered
 
 

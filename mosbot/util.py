@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 def setup_logging(debug=False):
-    """Setup logging app wide, pass parameter to enable more verbosity
+    """Set up the logging accross the app.
+
+    Pass parameter to enable more verbosity.
 
     :param bool debug: If we want it verbose or not, defaults to False
     :return:
@@ -41,7 +43,7 @@ def setup_logging(debug=False):
 
 
 def check_alembic_in_latest_version():
-    """Makes sure we are using the latest alembic"""
+    """Make sure we are using the latest Alembic."""
     config = Config('alembic.ini')
     script = ScriptDirectory.from_config(config)
     heads = script.get_revisions(script.get_heads())
@@ -60,7 +62,7 @@ def check_alembic_in_latest_version():
         raise RuntimeError(f'Database is not upgraded to latest head {head} from {current_head}')
 
 
-def retries(*, tries=10, final_message):  # pragma: no cover
+def retries(*, tries=10, final_message):  # pragma: no cover  # noqa D103
     def retry(func):
         @wraps(func)
         async def wrapper(*a, **kw):

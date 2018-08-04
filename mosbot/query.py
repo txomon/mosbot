@@ -23,10 +23,11 @@ logger = logging.getLogger(__name__)
 
 @async_contextmanager
 async def ensure_connection(conn):
-    """
-    Makes sure that the connection is active. Will be replaced in the future by something attached to an
-    asyncio.Task scope, but for now let's just ignore it. The argument is the connection to the database, so
-    the connection should be created when we are planning to access the database.
+    """Ensure that the connection is active.
+
+    Will be replaced in the future by something attached to an asyncio.Task scope, but for now let's just ignore it.
+    The argument is the connection to the database, so the connection should be created when we are planning to access
+    the database.
 
     Unless there is a usecase that keeps the connection open for a long time unnactively, you can just use
     this function at the usecase top function and pass the conn object down. Check existing code for examples
@@ -41,7 +42,7 @@ async def ensure_connection(conn):
             await conn.close()
 
 
-async def execute_and_first(*, query, conn=None):
+async def execute_and_first(*, query, conn=None):  # noqa D103
     async with ensure_connection(conn) as conn:
         result_proxy = await conn.execute(query)
         data = await result_proxy.first()
@@ -50,9 +51,10 @@ async def execute_and_first(*, query, conn=None):
         return dict(data)
 
 
-async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
-    """
-    Retrieves a user by id, or dtid or username. id is preferred
+async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:  # noqa D103  TODO
+    """Retrieves a user by id, or dtid or username.
+
+    id is preferred
 
     :param dict user_dict: Keys to define the get(), names as in the table columns
     :param conn: A connection if any open
@@ -75,8 +77,9 @@ async def get_user(*, user_dict: dict, conn=None) -> Optional[dict]:
 
 
 async def save_user(*, user_dict: dict, conn=None) -> dict:
-    """
-    Saves user, makes sure that you provide at least either username or dtid,
+    """Save user to the database.
+
+    Make sure that you provide at least either username or dtid,
 
     :param dict user_dict: Keys to save in the database
     :param conn: A connection if any open
@@ -96,6 +99,7 @@ async def save_user(*, user_dict: dict, conn=None) -> dict:
 
 
 async def get_or_save_user(*, user_dict: dict, conn=None) -> dict:
+    """Try to retrieve a given user. If it doesn't exist, try to create it."""
     user = await get_user(user_dict=user_dict, conn=conn)
     if user:
         return user
@@ -107,8 +111,9 @@ async def get_or_save_user(*, user_dict: dict, conn=None) -> dict:
 
 
 async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
-    """
-    Get a given track, need to either have the id or the extid (if possible with origin
+    """Get a given track.
+
+    It need to either have the id or the extid (if possible with origin
 
     :param dict track_dict: Keys as in the table columns
     :param conn: A connection if any open
@@ -128,8 +133,9 @@ async def get_track(*, track_dict: dict, conn=None) -> Optional[dict]:
 
 
 async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
-    """
-    Saves a track, updating whatever fields are given in track_dict
+    """Save a given track to the database.
+
+    Any fields given in track_dict will be updated.
 
     :param dict track_dict: Keys as in the table columns
     :param conn: A connection if any open
@@ -150,7 +156,7 @@ async def save_track(*, track_dict: dict, conn=None) -> Optional[dict]:
     return await execute_and_first(query=query, conn=conn)
 
 
-async def get_or_save_track(*, track_dict: dict, conn=None) -> dict:
+async def get_or_save_track(*, track_dict: dict, conn=None) -> dict:  # noqa D103  TODO
     track = await get_track(track_dict=track_dict, conn=conn)
     if track:
         return track
@@ -162,7 +168,7 @@ async def get_or_save_track(*, track_dict: dict, conn=None) -> dict:
 
 
 async def get_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
-    """Retrieves a playback, given the id or the start time. Preferably id.
+    """Retrieve a playback, given the id or the start time (preferably id).
 
     This is not a query complex query, but just a way to get something you know it exists.
 
@@ -200,7 +206,7 @@ async def save_playback(*, playback_dict: dict, conn=None) -> Optional[dict]:
     return await execute_and_first(query=query, conn=conn)
 
 
-async def get_or_save_playback(*, playback_dict: dict, conn=None) -> dict:
+async def get_or_save_playback(*, playback_dict: dict, conn=None) -> dict:  # noqa D103  TODO
     playback = await get_playback(playback_dict=playback_dict, conn=conn)
     if playback:
         return playback
@@ -212,7 +218,9 @@ async def get_or_save_playback(*, playback_dict: dict, conn=None) -> dict:
 
 
 async def get_user_action(*, user_action_dict: dict, conn=None) -> Optional[dict]:
-    """Get an specific user action, not querying (like multiple entries), so you need to provide the id
+    """Get an specific user action from the database.
+
+    Get an specific user action not querying (like multiple entries), so you need to provide the id.
 
     :param dict user_action_dict: Key use is id, if missing it will fail
     :param conn: A connection if any open
@@ -247,7 +255,9 @@ async def save_user_action(*, user_action_dict: dict, conn=None) -> Optional[dic
 
 
 async def save_bot_data(key, value, *, conn=None):
-    """Save some random data in the database. Accepts a json as value
+    """Save some random data in the database.
+
+    Accepts a JSON as value.
 
     :param str key: A key of the ones specified (is not checked, up to you)
     :param value: Any json serializable value, for now not datetime, be careful
@@ -270,7 +280,7 @@ async def save_bot_data(key, value, *, conn=None):
 
 
 async def load_bot_data(key, *, conn=None):
-    """Retrieve a data value
+    """Retrieve a data value.
 
     :param str key: A value in the accepted keys (if you want)
     :param conn: A connection if any open
@@ -282,8 +292,10 @@ async def load_bot_data(key, *, conn=None):
 
 
 async def get_last_playback(*, conn=None) -> dict:
-    """This makes a query looking for the most recent playback in the database. It cannot assure it's still playing
-    though
+    """Get last playback from the database.
+
+    The last playback is the most recent playback in the database. It cannot be assured that the track is still
+    playing.
 
     :param conn: A connection if any open
     :return: The last recorded playback
@@ -295,7 +307,7 @@ async def get_last_playback(*, conn=None) -> dict:
 
 
 async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:
-    """Get the user actions for a given user, no more filters than that
+    """Get the user actions for a given user, no more filters than that.
 
     :param str user_id: User id for who we want to retrieve the records for
     :param conn: A connection if any open
@@ -311,7 +323,7 @@ async def get_user_user_actions(user_id, *, conn=None) -> List[dict]:
 
 
 async def get_user_dub_user_actions(user_id, *, conn=None) -> List[dict]:
-    """Get the user dubs (upvote/downvote) only, not specific to a given playback
+    """Get the user dubs (upvote/downvote) only, not specific to a given playback.
 
     :param str user_id: User id for who we want to retrieve the records for
     :param conn: A connection if any open
@@ -328,9 +340,11 @@ async def get_user_dub_user_actions(user_id, *, conn=None) -> List[dict]:
 
 
 def get_dub_action(dub):
-    """Transform a name received by the api into an internal action. Shouldn't really be here but it's the best place
+    """Transform a name received by the api into an internal action.
 
-    Skip is not supported because it's never referred as an skip by itself
+    Shouldn't really be here but it's the best place.
+
+    Skip is not supported because it's never referred as an skip by itself.
 
     :param str dub: As the dubtrack API refers to this
     :return: :ref:`Action.upvote` or :ref:`Action.downvote`.
@@ -347,7 +361,7 @@ def get_dub_action(dub):
 
 
 def get_opposite_dub_action(dub):
-    """Transform a name received by the API into the opposite. Only works for up/down votes
+    """Transform a name received by the API into the opposite. Only works for up/down votes.
 
     :param str dub: Dubtrack api name
     :return: :ref:`Action.downvote` or :ref:`Action.upvote`
@@ -364,7 +378,7 @@ def get_opposite_dub_action(dub):
 
 
 async def query_simplified_user_actions(playback_id, *, conn=None) -> List[dict]:
-    """Return the final output of user actions for a given playback
+    """Return the final output of user actions for a given playback.
 
     We no longer delete entries, instead we support many being inserted, and we just have into account the last vote
     and the skip if any.

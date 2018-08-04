@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 import logging
 from abot.dubtrack import DubtrackEntity, DubtrackPlaying, DubtrackSkip, DubtrackDub
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 async def ensure_dubtrack_entity(*, user: DubtrackEntity, conn=None):
-    """Make sure that a dubtrack entity is registered in the database"""
+    """Ensure that a given Dubtrack entity is registered in the database."""
     user_dict = {
         'dtid': user.id,
         'username': user.username,
@@ -19,7 +20,7 @@ async def ensure_dubtrack_entity(*, user: DubtrackEntity, conn=None):
 
 
 async def ensure_dubtrack_playing(*, event: DubtrackPlaying, conn=None):
-    """Make sure that we have the track and the playback in the database"""
+    """Ensure that the database contains the track and the playback specified within the event parameter."""
     user = await ensure_dubtrack_entity(user=event.sender, conn=conn)
     user_id = user['id']
     track_dict = {
@@ -46,6 +47,7 @@ async def ensure_dubtrack_skip(*, event: DubtrackSkip, conn=None):
     relying on that dubtrack backend will send first a chat skip event and then a playing event. Also, this may have
     a race condition because of the asyncronicity of the library/bot. We may end up processing this event untimed and
     wrong... Hope there is not such race condition for now.
+
     """
     playback = await get_last_playback(conn=conn)
     user = await ensure_dubtrack_entity(user=event.sender, conn=conn)
@@ -60,9 +62,12 @@ async def ensure_dubtrack_skip(*, event: DubtrackSkip, conn=None):
 
 
 async def ensure_dubtrack_dub(*, event: DubtrackDub, conn=None):
-    """Ensure that a user action (user upvote/downvote) is being stored. Because we don't have all the track info,
+    """Ensure that a user action (user upvote/downvote) is being stored.
+
+    Because we don't have all the track info,
     we cannot be 100% sure of the track, but we check start time, that is unique, if this checks, better to lose the
-    data than to put a wrong dub from a person"""
+    data than to put a wrong dub from a person
+    """
     playback = await get_last_playback(conn=conn)
     if not event.played == playback['start']:
         logger.error(f'Last saved playback is {playback["start"]} but this vote is for {event.played}')
