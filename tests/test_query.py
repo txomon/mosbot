@@ -223,13 +223,22 @@ async def test_get_track(db_conn, track_generator, track_dict, raises_exception)
 @pytest.mark.parametrize("track_dict, raises_exception", [
     ({'extid': 'ab12', 'origin': 'youtube', 'length': 120, 'name': 'One name'}, None),
     ({'extid': 'ab12', 'origin': Origin.youtube, 'length': 120, 'name': 'One name'}, None),
+    ({'extid': 'ab12', 'origin': Origin.youtube, 'length': 120.0, 'name': 'One name'}, None),
     ({'extid': 12345, 'origin': 'youtube', 'length': 120, 'name': 'One name'}, AssertionError),
     ({'extid': 'ab12', 'origin': 'youtube', 'length': '120', 'name': 'One name'}, AssertionError),
     ({'extid': 'ab12', 'origin': (1, 2), 'length': 120, 'name': 'One name'}, AssertionError),
     ({'extid': 'ab12', 'origin': 'youtube', 'length': 120, 'name': 12345}, AssertionError),
     ({}, AssertionError),
-], ids=['good_with_string', 'good_with_enum', 'bad_with_int', 'bad_with_string', 'bad_with_tuple', 'bad_with_int_name',
-        'bad_no_data'])
+], ids=[
+    'good_with_string',
+    'good_with_enum',
+    'good_with_float',
+    'bad_with_int',
+    'bad_with_string',
+    'bad_with_tuple',
+    'bad_with_int_name',
+    'bad_no_data'
+])
 @pytest.mark.asyncio
 async def test_save_track(db_conn, track_dict, raises_exception):
     if raises_exception:
