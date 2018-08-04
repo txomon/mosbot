@@ -9,7 +9,7 @@ click = "*"
 aiopg = "*"
 alembic = "*"
 asyncio-extras = "*"
-abot = "==0.0.1a1.dev16"
+abot = "==0.0.1a1.post0.dev23"
 
 [dev-packages]
 pylint = "*"

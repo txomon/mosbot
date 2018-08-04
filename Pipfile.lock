@@ -16,11 +16,11 @@
     "default": {
         "abot": {
             "hashes": [
-                "sha256:937ebd527b054143aa57f608cf24eda259623b87b0d22c888cb492dbb09f5b6c",
-                "sha256:faa54e5f1576807884311e5edd7ea3b6c1aac945efd0a103f36ec8ba5feb1511"
+                "sha256:606e403004db879b2ce676e04eb499e871af5f98909ab9e8b8186f20cd1c51f7",
+                "sha256:fb73dd52603ae307b24a3083e6c23a37322ce09d8c3f0e3461327a23063ed89d"
             ],
             "index": "pypi",
-            "version": "==0.0.1a1.dev16"
+            "version": "==0.0.1a1.post0.dev23"
         },
         "aiohttp": {
             "hashes": [

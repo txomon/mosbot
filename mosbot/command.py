@@ -91,13 +91,14 @@ def test():
 
 @botcli.command()
 @click.option('--debug/--no-debug', '-d/ ', default=False)
-def run(debug):
+@click.option('--room', '-r', nargs=1, default='master-of-soundtrack')
+def run(debug, room):
     """Run the bot, this is the main command that is usually run in the server"""
     check_alembic_in_latest_version()
     setup_logging(debug)
     # Setup
     bot = Bot()
-    dubtrack_backend = DubtrackBotBackend()
+    dubtrack_backend = DubtrackBotBackend(room=room)
     dubtrack_backend.configure(username=mos_config.DUBTRACK_USERNAME, password=mos_config.DUBTRACK_PASSWORD)
     bot.attach_backend(backend=dubtrack_backend)
     # bot.attach_command_group(botcmd) #: Disabled until permissions are implemented
