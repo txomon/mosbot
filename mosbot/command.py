@@ -16,7 +16,7 @@ import typing
 import click
 
 import abot.cli as cli
-from abot.bot import Bot
+from abot.bot import Bot, current_event, MessageEvent
 from mosbot import config as mos_config
 from mosbot.handler import availability_handler, history_handler
 from mosbot.query import load_bot_data, save_bot_data
@@ -50,15 +50,18 @@ async def botcmd():
 @botcmd.command()
 async def atest():
     """Test (ping/pong) like to check if it works"""
-    print('aTest')
+    event: MessageEvent = current_event.get()
+    await event.reply('atest')
 
 
 @botcmd.command()
 @click.option('--debug/--no-debug', '-d/ ', default=False)
 async def history_sync(debug):
     """Triggers a history sync task. It should be really controlled so that users cannot trigger it alone."""
-    check_alembic_in_latest_version()
-    setup_logging(debug)
+    event: MessageEvent = current_event.get()
+    if not event:
+        check_alembic_in_latest_version()
+        setup_logging(debug)
     await save_history_songs()
 
 
@@ -68,12 +71,13 @@ async def history_sync(debug):
 async def config(key, value):
     """Set new value for key in the database (used to override internals, needs to be controlled, as someone could
     really break something here"""
+    event: MessageEvent = current_event.get()
     if value:
         await save_bot_data(key, value)
-        cli.echo(f'Saved key {key}')
+        await event.reply(f'Saved key {key}')
     else:
         value = await load_bot_data(key)
-        cli.echo(f'Value for key {key} is `{json.dumps(value)}`')
+        await event.reply(f'Value for key {key} is `{json.dumps(value)}`')
 
 
 @click.group(invoke_without_command=True)
@@ -101,7 +105,7 @@ def run(debug, room):
     dubtrack_backend = DubtrackBotBackend(room=room)
     dubtrack_backend.configure(username=mos_config.DUBTRACK_USERNAME, password=mos_config.DUBTRACK_PASSWORD)
     bot.attach_backend(backend=dubtrack_backend)
-    # bot.attach_command_group(botcmd) #: Disabled until permissions are implemented
+    bot.attach_command_group(botcmd)  #: Disabled until permissions are implemented
 
     bot.add_event_handler(func=history_handler)
     bot.add_event_handler(func=availability_handler)
