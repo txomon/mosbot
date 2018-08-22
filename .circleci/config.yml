@@ -13,12 +13,10 @@ jobs:
       - restore_cache:
           keys:
           - v1-venv-{{ checksum "Pipfile.lock" }}
-          - v1-venv-
 
       - restore_cache:
           keys:
           - v1-tox-{{ checksum "Pipfile.lock" }}
-          - v1-tox-
 
       - run:
           name: install dependencies
