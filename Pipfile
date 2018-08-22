@@ -28,3 +28,6 @@ pytest-pycharm = "*"
 pytest-xdist = "*"
 tox = "*"
 coveralls = "*"
+
+[requires]
+python_version = "3.7"
