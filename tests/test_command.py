@@ -1,5 +1,6 @@
 import asynctest as am
 import pytest
+from abot.bot import current_event
 from click.testing import CliRunner
 from unittest import mock
 
@@ -70,14 +71,15 @@ def test_atest(event_loop):
     result = runner.invoke(main, ['atest'])
 
     assert result.exit_code == 0
-    assert result.output.strip() == 'aTest'
+    assert result.output.strip() == 'atest'
 
 
-@pytest.mark.parametrize('debug_arg,debug', (
-        ('--debug', True),
-        ('-d', True),
-        ('--no-debug', False),
-        ('', False),
+@pytest.mark.parametrize('debug_arg,debug,bot_message', (
+        ('--debug', True, False),
+        ('-d', True, False),
+        ('--no-debug', False, False),
+        ('', False, False),
+        ('', False, True),
 ))
 def test_history_sync(
         event_loop,
@@ -85,20 +87,29 @@ def test_history_sync(
         setup_logging_mock,
         save_history_songs_mock,
         debug_arg,
-        debug
+        debug,
+        bot_message
 ):
     runner = CliRunner()
     args = ['history_sync']
     if debug_arg:
         args.append(debug_arg)
 
+    if bot_message:
+        cet = current_event.set(mock.MagicMock())
     result = runner.invoke(main, args)
+    if bot_message:
+        current_event.reset(cet)
 
     assert result.exit_code == 0
     assert result.output.strip() == ''
 
-    check_alembic_in_latest_version_mock.assert_called_once_with()
-    setup_logging_mock.assert_called_once_with(debug)
+    if bot_message:
+        check_alembic_in_latest_version_mock.assert_not_called()
+        setup_logging_mock.assert_not_called()
+    else:
+        check_alembic_in_latest_version_mock.assert_called_once_with()
+        setup_logging_mock.assert_called_once_with(debug)
     save_history_songs_mock.assert_awaited_once_with()
 
 
