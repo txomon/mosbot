@@ -1,0 +1,29 @@
+image:
+  repository: dtgoitia/mosbot
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# TODO: setup ingress
+service:
+  type: NodePort
+  port: 80
+
+# Dubtrack credentials
+# dubtrackUsername: rococo
+# dubtrackPassword: 1234
+
+ingress:
+  enabled: false
+  tls: false
+  hosts:
+    - host: mosbot-chart.local
+      paths: []
+
+postgresql:
+  postgresqlUsername: dbUser
+  postgresqlPassword: pass1234
+  postgresqlDatabase: myPostgresDatabaseName
+  service:
+    port: 5432

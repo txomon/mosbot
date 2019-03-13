@@ -1,0 +1,20 @@
+{{- template "common.deployment" (list . "mosbot.deployment") -}}
+{{- define "mosbot.deployment" -}}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    spec:
+      containers:
+      - {{ template "common.container" (list . "mosbot.deployment.container") }}
+{{- end -}}
+{{- define "mosbot.deployment.container" -}}
+env:
+  - name: DATABASE_URL
+    value: {{ template "mosbot-chart.databaseurl" . }}
+  {{ if and .Values.dubtrackUsername .Values.dubtrackPassword -}}
+  - name: DUBTRACK_USERNAME
+    value: {{ .Values.dubtrackUsername | quote }}
+  - name: DUBTRACK_PASSWORD
+    value: {{ .Values.dubtrackPassword | quote }}
+  {{ end -}}
+{{- end -}}

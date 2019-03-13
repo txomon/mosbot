@@ -1,0 +1,7 @@
+dependencies:
+  - name: common
+    repository: http://storage.googleapis.com/kubernetes-charts-incubator
+    version: 0.0.5
+  - name: postgresql
+    repository: https://kubernetes-charts.storage.googleapis.com
+    version: 3.13.1
