@@ -551,12 +551,61 @@ def test_get_opposite_dub_action(input, output):
         assert output == get_opposite_dub_action(input)
 
 
-@pytest.mark.parametrize('loops, output', (
-        (1, {Action.upvote, }),
-        (2, {Action.downvote, }),
-        (3, {Action.upvote, }),
-        pytest.param(4, {Action.upvote, Action.skip}, marks=pytest.mark.xfail(
-            reason='The query is not complete enough to only aggregate upvotes and downvotes')),
+@pytest.mark.parametrize('user_action, expected_result', (
+        ([
+                {'user_id': 1, 'action': 'upvote'},
+        ], {
+            0: Action.upvote.name,
+        }),
+        ([
+                {'user_id': 1, 'action': 'upvote'},
+                {'user_id': 1, 'action': 'downvote'},
+        ], {
+            0: Action.downvote.name,
+        }),
+        ([
+                {'user_id': 1, 'action': 'upvote'},
+                {'user_id': 1, 'action': 'skip'},
+        ], {
+            0: Action.upvote.name,
+            1: Action.skip.name,
+        }),
+        ([
+                {'user_id': 1, 'action': 'upvote'},
+                {'user_id': 1, 'action': 'downvote'},
+                {'user_id': 1, 'action': 'skip'},
+        ], {
+            0: Action.downvote.name,
+            1: Action.skip.name,
+        }),
+        ([
+                {'user_id': 1, 'action': 'upvote'},
+                {'user_id': 2, 'action': 'upvote'},
+        ], {
+            0: Action.upvote.name,
+            1: Action.upvote.name,
+        }),
+        ([
+                {'user_id': 1, 'action': 'upvote'},
+                {'user_id': 2, 'action': 'upvote'},
+                {'user_id': 1, 'action': 'downvote'},
+                {'user_id': 1, 'action': 'skip'},
+        ], {
+            0: Action.upvote.name,
+            1: Action.downvote.name,
+            2: Action.skip.name,
+        }),
+        ([
+                {'user_id': 2, 'action': 'upvote'},
+                {'user_id': 3, 'action': 'upvote'},
+                {'user_id': 4, 'action': 'downvote'},
+                {'user_id': 1, 'action': 'skip'},
+        ], {
+            0: Action.upvote.name,
+            1: Action.upvote.name,
+            2: Action.downvote.name,
+            3: Action.skip.name,
+        }),
 ))
 @pytest.mark.asyncio
 async def test_query_simplified_user_actions(
@@ -565,16 +614,18 @@ async def test_query_simplified_user_actions(
         user_generator,
         playback_generator,
         user_action_generator,
-        loops,
-        output
-):
-    actions = ['upvote', 'downvote', 'upvote', 'skip']
+        user_action,
+        expected_result):
     track = await track_generator()
-    user = await user_generator()
-    playback = await playback_generator(user=user, track=track)
-    for _, action in zip(range(loops), actions):
-        await user_action_generator(user=user, playback=playback, action=action)
+    registered_user = await user_generator()
+    await user_generator()
+    await user_generator()
+    await user_generator()
+    playback = await playback_generator(user=registered_user, track=track)
 
-    user_actions = await query_simplified_user_actions(playback_id=playback['id'], conn=db_conn)
-    result = {ua['action'] for ua in user_actions}
-    assert result == output
+    for action in user_action:
+        await user_action_generator(user={'id': action['user_id']}, playback=playback, action=action['action'])
+
+    simplified_user_action = await query_simplified_user_actions(playback_id=playback['id'], conn=db_conn)
+    actual_result = {i: user_action['action'] for i, user_action in enumerate(simplified_user_action)}
+    assert expected_result == actual_result

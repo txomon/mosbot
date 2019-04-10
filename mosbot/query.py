@@ -11,7 +11,6 @@ import logging
 from typing import List, Optional
 
 import sqlalchemy as sa
-import sqlalchemy.sql.functions as saf
 from asyncio_extras import async_contextmanager
 from sqlalchemy.dialects import postgresql as psa
 
@@ -387,41 +386,42 @@ async def query_simplified_user_actions(playback_id, *, conn=None) -> List[dict]
     :param conn: A connection if any open
     :return: A list of the records
     """
-    sub_query = sa.select([
-        db.UserAction.c.user_id,
-        saf.max(db.UserAction.c.ts).label('ts'),
-        db.UserAction.c.playback_id,
-    ]).where(
-        db.UserAction.c.playback_id == playback_id
-    ).group_by(
-        db.UserAction.c.user_id,
-        db.UserAction.c.playback_id,
-        sa.case([
-            (db.UserAction.c.user_id.is_(None), db.UserAction.c.id),
-        ], else_=0)
-    ).alias()
-
-    query = sa.select([
-        sa.distinct(db.UserAction.c.id),
-        db.UserAction.c.action,
-        db.UserAction.c.playback_id,
-        db.UserAction.c.ts,
-        db.UserAction.c.user_id,
-    ]).select_from(
-        db.UserAction.join(
-            sub_query,
-            sa.and_(
-                sub_query.c.ts == db.UserAction.c.ts,
-                db.UserAction.c.playback_id == sub_query.c.playback_id,
-                sa.case([
-                    (sa.and_(
-                        db.UserAction.c.user_id.is_(None),
-                        sub_query.c.user_id.is_(None)
-                    ), sa.true())
-                ], else_=db.UserAction.c.user_id == sub_query.c.user_id)
-            )
-        )
-    )
+    query = f"""
+        select *
+        from (
+            select
+                "song_title",
+                "username",
+                "action_timestamp",
+                "action",
+                "rn",
+                lag("action") over (partition by "username") as "next_action"
+            from (
+                select *
+                from (
+                    select
+                        p.id         "playback_id",
+                        u.username   "username",
+                        u.id         "user_id",
+                        t."name"     "song_title",
+                        ua.id        "action_id",
+                        ua."action"  "action",
+                        ua.ts        "action_timestamp",
+                        row_number() over (partition by ua.user_id, p.id order by u.username asc, ua.ts desc) rn
+                    from playback p
+                        left join user_action ua on p.id = ua.playback_id
+                        left join track t on p.track_id = t.id
+                        left join "user" u on ua.user_id = u.id
+                        where p.id = {playback_id}
+                ) sub
+            ) sub2
+        ) sub3
+        where
+            "rn" = 1 or
+            "next_action" = 'skip' or
+            "username" = null
+        order by "action_timestamp"
+    """
     async with ensure_connection(conn) as conn:
         result = []
         async for user_action in await conn.execute(query):
