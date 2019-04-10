@@ -4,32 +4,35 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-sqlalchemy = "*"
-click = "*"
+abot = "==0.0.1a1.post0.dev29"
 aiopg = "*"
 alembic = "*"
 asyncio-extras = "*"
-abot = "==0.0.1a1.post0.dev29"
+click = "*"
+sqlalchemy = "*"
 
 [dev-packages]
-pylint = "*"
-rope = "*"
-"autopep8" = "*"
-restructuredtext-lint = "*"
-logging-tree = "*"
-pytest = "*"
-pytest-mock = "*"
-pytest-cov = "*"
-pytest-asyncio = "*"
-"flake8" = "*"
+# Testing
 asynctest = "*"
-ipdb = "*"
-pytest-pycharm = "*"
+coveralls = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+pytest-mock = "*"
 pytest-xdist = "*"
 tox = "*"
-coveralls = "*"
+# Linting
+"autopep8" = "*"
+"flake8" = "*"
 "flake8-docstrings" = "*"
 "flake8-per-file-ignores" = "*"
+pylint = "*"
+restructuredtext-lint = "*"
+rope = "*"
+# Debugging
+ipdb = "*"
+logging-tree = "*"
+pytest-pycharm = "*"
 
 [requires]
 python_version = "3.7"
