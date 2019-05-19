@@ -1,15 +1,14 @@
-FROM python:3.6-slim
+FROM python:3.7-slim
 
 WORKDIR /usr/src/app
 
 RUN pip install pipenv
 COPY Pipfile Pipfile.lock ./
-RUN pipenv install
+RUN pipenv sync
 
-COPY dist/abot-0.0.1a0.tar.gz ./mosbot.tar.gz
-RUN tar xf mosbot.tar.gz --strip-components=1
-
+COPY setup.cfg setup.py README.rst alembic.ini ./
+COPY alembic ./alembic
+COPY mosbot ./mosbot
 RUN pipenv run python setup.py develop
 
-CMD ["pipenv", "run", "bot", "run"]
-
+CMD ["/bin/sh", "-c", "pipenv run alembic upgrade head && pipenv run bot run"]
